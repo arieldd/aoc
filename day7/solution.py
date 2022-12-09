@@ -1,6 +1,3 @@
-from collections import deque
-
-
 class Folder:
     def __init__(self, name, parent):
         self.name = name
