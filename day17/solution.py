@@ -55,6 +55,7 @@ def simulate_rocks(pushes, end):
     full = {}
 
     steps = 0
+    cycle_heights = [[0, 0]]
     while rocks_fallen < end:
         shape = get_next_rock(rocks_fallen)
 
@@ -80,7 +81,12 @@ def simulate_rocks(pushes, end):
             if pos not in full:
                 full[pos] = rocks_fallen
 
-    print_rocks(full, highest_rock + 4)
+
+        if rocks_fallen % 5 ==0:
+            cycle_heights.append( [highest_rock, highest_rock - cycle_heights[-1][0]])
+
+    #print_rocks(full, highest_rock + 4)
+    print([delta[1] for delta in cycle_heights])
     return highest_rock
 
 def find_repeat(rocks_fallen, steps, push_length, highest_rock, full):
@@ -113,7 +119,10 @@ def print_rocks(occupied, height, rock=None):
             map[k[0]][k[1]] = 2
 
     print()
+    i = len(map) - 1
     for row in reversed(map):
+        print(i, end='\t')
+        i -= 1
         for val in row:
             text = '#' if val else '.'
             if val == 2:
@@ -121,7 +130,7 @@ def print_rocks(occupied, height, rock=None):
             print(text, end=' ')
         print()
 
-with open("test.txt", "r") as file:
+with open("input.txt", "r") as file:
     
     rock1 = [[1,1,1,1]]
     rock2 = [[0, 1, 0], [1, 1, 1], [0, 1, 0]]
@@ -133,8 +142,25 @@ with open("test.txt", "r") as file:
     
 
     pushes = parse_dirs(data)
-    end = 2050
-    #end = 1000000000000
-    height = simulate_rocks(pushes, end)
-    print(height)
+    #end = 100910
+    end = 1000000000000
+    #height = simulate_rocks(pushes, end)
+    #print(height)
 
+    # Test data 
+    # rocks_remaining = end - 15
+    # repeat = [11, 7, 8, 9, 6, 6, 6]
+    # times = rocks_remaining // (len(repeat) * 5)
+    # remainder = rocks_remaining % (len(repeat) * 5)
+    # print(remainder, repeat[:remainder//5], sum(repeat[:remainder//5]))
+
+    # print(25 + times * sum(repeat) )
+
+    # Input data 
+    prelim = [8, 4, 7, 9, 8, 8, 9, 4, 7, 12, 1, 7, 10, 12, 8, 10, 11, 9, 7, 7, 8, 7, 8, 3, 8, 11, 7, 7, 6, 5, 10, 7, 6, 7, 8, 8, 8, 10, 9, 9, 11, 6, 5, 7, 5, 6, 9, 7, 6, 7, 5, 10, 9, 6, 8, 3, 7]
+    rocks_remaining = end - 5 * len(prelim)
+    repeat = [7, 9, 6, 11, 11, 8, 9, 4, 10, 3, 8, 9, 6, 10, 9, 8, 9, 9, 9, 9, 6, 7, 8, 7, 6, 8, 10, 9, 8, 6, 7, 12, 11, 7, 7, 13, 9, 6, 12, 11, 6, 8, 9, 8, 8, 6, 6, 4, 9, 6, 10, 9, 11, 7, 8, 11, 7, 9, 5, 10, 3, 7, 6, 5, 8, 5, 6, 9, 7, 6, 10, 9, 7, 5, 10, 10, 8, 9, 5, 5, 9, 10, 7, 6, 9, 10, 8, 7, 7, 8, 12, 11, 7, 10, 6, 7, 4, 10, 10, 6, 11, 7, 7, 8, 8, 7, 7, 9, 7, 9, 6, 4, 9, 7, 7, 6, 10, 6, 8, 9, 11, 8, 10, 8, 11, 5, 9, 11, 8, 9, 7, 6, 9, 7, 6, 8, 6, 5, 9, 10, 6, 13, 8, 3, 9, 8, 6, 11, 10, 3, 6, 11, 11, 7, 9, 7, 6, 7, 7, 6, 7, 10, 11, 7, 9, 8, 5, 9, 11, 9, 9, 7, 11, 8, 9, 11, 8, 10, 11, 8, 9, 9, 7, 10, 9, 7, 7, 7, 7, 9, 8, 7, 11, 7, 5, 6, 6, 5, 10, 7, 11, 9, 7, 8, 10, 7, 9, 7, 6, 7, 6, 6, 7, 5, 9, 8, 9, 6, 8, 4, 7, 9, 11, 6, 11, 10, 9, 7, 7, 5, 11, 8, 7, 11, 10, 7, 6, 6, 6, 8, 13, 11, 5, 7, 10, 5, 7, 7, 8, 9, 7, 8, 13, 13, 8, 7, 7, 6, 5, 13, 5, 10, 8, 9, 5, 8, 6, 11, 7, 8, 7, 8, 6, 6, 6, 9, 5, 10, 6, 8, 6, 9, 6, 13, 3, 5, 7, 12, 8, 8, 9, 7, 8, 7, 6, 6, 5, 10, 8, 6, 13, 8, 5, 6, 6, 7, 7, 6, 7, 9, 8, 6, 7, 8, 8, 9, 7, 7, 13, 7, 8, 7, 7, 5, 7, 6, 9, 8, 8, 7, 11, 8, 6, 8, 6, 8, 3, 11, 7, 6, 11, 7, 8, 7, 13, 7, 5, 11, 9]
+    times = rocks_remaining // (len(repeat) * 5)
+    remainder = rocks_remaining % (len(repeat) * 5)
+
+    print(sum(prelim) + times * sum(repeat) +  sum(repeat[:remainder //5]))
