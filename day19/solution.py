@@ -12,4 +12,3 @@ with open("test.txt", "r") as file:
     for line in data:
         split = line.split(':')
         bp_id = int(split[0].split()[1])
-        cost1 = 
