@@ -1,67 +1,46 @@
+class Number:
+    def __init__(self, val, pos) -> None:
+        self.val = val
+        self.pos = pos
+        self.start = pos
 
-def mix(code):
-    print_mix(code)
-    size = len(code)
-    for val, ix in code.items():
-        if val == 0:
-            continue
-        shift = (ix + val)
-        if shift < 0:
-            shift += size -1
-
-        new_pos = shift % size
-
-        if new_pos == 0:
-            print(val, ix)
-            new_pos = size -1
-        if new_pos == size-1:
-            new_pos = 0
-
-        for other, index in code.items():
-            if other == val:
-                continue
-            
-            s2 = (index - 1)
-            if s2 < 0:
-                s2 += size -1
-            
-            if val > 0:
-                if new_pos > ix and ix < index <= new_pos:
-                    code[other] = s2 % size
-                elif new_pos < ix and new_pos <= index <ix:
-                    code[other] = (index + 1) % size 
-            elif val < 0:
-                if new_pos < ix and ix > index >= new_pos:
-                    code[other] = (index + 1) % size
-                elif new_pos > ix and ix < index <= new_pos:
-                    code[other] = s2 % size
-        
-        code[val] = new_pos
-        print_mix(code)
-
-    return code
-        
-def mix_native(code):
+def mix_native(code, times):
     result = list(code)
+
     size = len(result)
-    for val in code:
-        if val == 0:
-            continue
-        ix = index = result.index(val)
-        
-        if val < 0:
-            ix = size - 1 - ix
- 
-        shift = abs(val) % (size - 1)
-        new_pos = (ix + shift) % (size - 1)
+    for _ in range(times):
+        for n in code:
+            val = n.val
+            if val == 0:
+                continue
 
-        if val < 0:
-            new_pos = size - 1 - new_pos
+            ix = n.pos
+            sign = 1 if val > 0 else -1
 
-        result.pop(index)
-        result.insert(new_pos, val)
+            shift = abs(val) % (size - 1)
+            while shift:
+                next = ix + sign
+                if next < 0:
+                    next = size - 1
+                elif next >= size:
+                    next = 0
 
-        #print(result)
+                result[ix] = result[next]
+                result[next] = n
+
+                n.pos = next
+                result[ix].pos = ix
+
+                ix = next
+                shift -= 1
+
+    return format_code(result)
+
+def format_code(mix):
+    result = [0] * len(mix)
+    for n in mix:
+        result[n.pos] = n.val
+
     return result
 
 def decrypt(mix):
@@ -76,24 +55,28 @@ def decrypt(mix):
     print(encryption)
     return sum(encryption)   
 
-def print_mix(code):
-    numbers = [0] * len(code)
-
-    for v, ix in code.items():
-        numbers[ix] = v
-
-    print(numbers)
-
 
 with open("input.txt", "r") as file:
     
     data = [line.strip() for line in file.readlines()]
 
     code = []
-    for val in data:
-        code.append(int(val))
+    for ix, val in enumerate(data):
+        code.append(Number(int(val), ix))
 
-    mix = mix_native(code)
+    #Part 1
+    # mix = mix_native(code, 1)
+
+    # print(len(mix))
+    # print(decrypt(mix))
+
+    #Part 2
+    enc_key = 811589153
+
+    for n in code:
+        n.val *= enc_key 
+    mix = mix_native(code, 10)
 
     print(len(mix))
     print(decrypt(mix))
+
