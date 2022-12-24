@@ -155,8 +155,8 @@ class Tunnels:
                 self.generate_paths(path, combinations)
                 path.pop()
 
-    def eval_path(self, path):
-        current = 0
+    def eval_path(self, path, start = 0):
+        current = start
         time_left = 30
 
         contribution = 0
@@ -192,6 +192,8 @@ with open("input.txt", "r") as file:
 
     p = graph.optimize_pressure()
     print(p)
+
+    print(graph.eval_path([7, 31, 46, 25, 17, 28, 4], 16))
     
     #best, path = graph.find_best_path()
     # print(path, best)
