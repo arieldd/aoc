@@ -30,7 +30,7 @@ class Tunnels:
         self.valves = valves
         self.size = len(valves)
         self.adj = np.zeros([self.size, self.size], dtype=int)
-        self.__fill_adj__(self.valves['AA'], None, [])
+        self.__fill_adj__()
         self.current = 'AA'
         self.flows = np.zeros(self.size, dtype=int)
         for _, v in self.valves.items():
@@ -40,7 +40,7 @@ class Tunnels:
     def __str__(self) -> str:
         return self.adj.__str__()
 
-    def __fill_adj__(self, current, parent, visited):
+    def __fill_adj__(self):
         for _, v in self.valves.items():
             self.adj[v.index][v.index] = 0
             for name in v.conn:
@@ -95,26 +95,31 @@ class Tunnels:
 
         total_pressure = 0
         while time_left:
-            contributions = self.get_contributions(current, time_left)
             
-            print(contributions)
+            best = None
+            worth = self.__worth__()
+            for valve in worth:
+                d = self.adj[current.index][valve.index]
 
-            best = [None, 0]
-            for name, (val, d) in contributions.items():
-                valve = self.valves[name]
-                weighted = val // d
-                if weighted > best[1]:
-                    best[0] = valve
-                    best[1] = weighted
+                if time_left - d - 1 < 0:
+                    continue
 
-            if not best[0]:
+                if not best:
+                    best = valve
+                    continue
+
+                bd= self.adj[current.index][best.index]
+                if (d >= bd and valve.flow > best.flow * (d - bd + 1)) \
+                or (d < bd and valve.flow * (bd - d + 1) > best.flow):
+                    best = valve
+
+            if not best:
                 return total_pressure
 
-            valve = best[0]
+            valve = best
             print(valve.name)
-            total_pressure += contributions[valve.name][0]
-
             d = self.adj[current.index][valve.index]
+            total_pressure += valve.flow * (time_left - d - 1)
 
             valve.open = True
             current = valve
@@ -122,7 +127,7 @@ class Tunnels:
             time_left -= (d + 1)
         
         return total_pressure
-                
+
     def get_contributions(self, current, time_left):
         worth = self.__worth__()
        
@@ -139,9 +144,6 @@ class Tunnels:
             result[valve.name] = (contribution, d)
 
         return result
-
-    def simulate_pair(v1, v2, c1, c2, time_left):
-        pass
 
     def generate_paths(self, path, combinations):
         if len(path) == len(self.worth):
@@ -188,10 +190,8 @@ with open("input.txt", "r") as file:
     #best = optimize_pressure_2(valves, 30)
     graph = Tunnels(valves)
 
-    # p = graph.optimize_pressure()
-    # print(p)
-    print(graph)
-    print(graph.flows)
+    p = graph.optimize_pressure()
+    print(p)
     
     #best, path = graph.find_best_path()
     # print(path, best)
