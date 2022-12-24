@@ -1,4 +1,6 @@
 import numpy as np
+np.set_printoptions(threshold=np.inf, linewidth=np.nan)
+
 from copy import deepcopy
 from itertools import permutations 
 class Valve:
@@ -23,7 +25,180 @@ class Valve:
     def worth(self):
         return self.flow > 0 and not self.open
 
-# class Path:
+class Tunnels:
+    def __init__(self, valves) -> None:
+        self.valves = valves
+        self.size = len(valves)
+        self.adj = np.zeros([self.size, self.size], dtype=int)
+        self.__fill_adj__(self.valves['AA'], None, [])
+        self.current = 'AA'
+        self.flows = np.zeros(self.size, dtype=int)
+        for _, v in self.valves.items():
+            self.flows[v.index] = v.flow
+        self.worth = [i for i, flow in enumerate(self.flows) if flow > 0]
+
+    def __str__(self) -> str:
+        return self.adj.__str__()
+
+    def __fill_adj__(self, current, parent, visited):
+        for _, v in self.valves.items():
+            self.adj[v.index][v.index] = 0
+            for name in v.conn:
+                next = self.valves[name].index
+                self.adj[v.index][next] = self.adj[next][v.index] = 1
+
+        for i in range(self.size):
+            for j in range(i, self.size):
+                self.adj[i][j] = self.adj[j][i] = self.__min_dist__(i, j, [])
+
+    def __min_dist__(self, i, j, visited):
+        if i == j:
+            return 0
+
+        if self.adj[i][j]:
+            return self.adj[i][j]
+        
+        neighbors = [ix for ix, d in enumerate(self.adj[i]) if d == 1]
+
+        visited.append(i)
+
+        dist = self.size
+        for ix in neighbors:
+            if ix in visited:
+                continue
+            d = self.__min_dist__(ix, j, visited)
+            if d + 1 < dist:
+                dist = d + 1
+
+        return dist
+
+    def find_best_path(self):
+        possible_paths = permutations(self.worth)
+        #self.generate_paths([], combinations)
+
+        best = 0 
+        best_path = []
+        for p in possible_paths:
+            val = self.eval_path(p)
+            if val > best:
+                best_path = p
+                best = val
+
+        return best, best_path        
+
+    def __worth__(self):
+        return  [v for v in valves.values() if v.worth()]
+
+    def optimize_pressure(self):
+        time_left = 30
+        current = self.valves['AA']
+
+        total_pressure = 0
+        while time_left:
+            contributions = self.get_contributions(current, time_left)
+            
+            print(contributions)
+
+            best = [None, 0]
+            for name, (val, d) in contributions.items():
+                valve = self.valves[name]
+                weighted = val // d
+                if weighted > best[1]:
+                    best[0] = valve
+                    best[1] = weighted
+
+            if not best[0]:
+                return total_pressure
+
+            valve = best[0]
+            print(valve.name)
+            total_pressure += contributions[valve.name][0]
+
+            d = self.adj[current.index][valve.index]
+
+            valve.open = True
+            current = valve
+
+            time_left -= (d + 1)
+        
+        return total_pressure
+                
+    def get_contributions(self, current, time_left):
+        worth = self.__worth__()
+       
+        result = {}
+        for valve in worth:
+            d = self.adj[current.index][valve.index]
+            
+            time = time_left - d - 1
+
+            if time < 0:
+                continue
+
+            contribution = valve.flow * time
+            result[valve.name] = (contribution, d)
+
+        return result
+
+    def simulate_pair(v1, v2, c1, c2, time_left):
+        pass
+
+    def generate_paths(self, path, combinations):
+        if len(path) == len(self.worth):
+            combinations.append(deepcopy(path))
+            return
+        for i in self.worth:
+            if i not in path:
+                path.append(i)
+                self.generate_paths(path, combinations)
+                path.pop()
+
+    def eval_path(self, path):
+        current = 0
+        time_left = 30
+
+        contribution = 0
+        for index in path:
+            d = self.adj[current][index]
+            time_left -= d + 1
+            contribution += self.flows[index] * time_left
+            current = index
+
+        return contribution
+
+
+with open("input.txt", "r") as file:
+    
+    data = [line.strip() for line in file.readlines()]
+
+    valves = {}
+    i = 0
+    for line in data:
+        parts = line.split(';')
+        name = parts[0].split()[1]
+        flow = int(parts[0].split('=')[1])
+        tunnels_part = parts[1].split()
+        tunnels = []
+        for v in tunnels_part[4:]:
+            tunnels.append(v.strip()[:2])
+
+        valves[name] = Valve(name, flow, tunnels, i)
+        i += 1
+
+    #best = optimize_pressure_2(valves, 30)
+    graph = Tunnels(valves)
+
+    # p = graph.optimize_pressure()
+    # print(p)
+    print(graph)
+    print(graph.flows)
+    
+    #best, path = graph.find_best_path()
+    # print(path, best)
+
+    #print(graph.adj[0])
+
+#    class Path:
 #     def __init__(self) -> None:
 #         self.nodes = []
 #         self.val = -1
@@ -247,114 +422,3 @@ class Valve:
 #         current = bst_path[-1][0]
 
 #     return pressure
-
-class Tunnels:
-    def __init__(self, valves) -> None:
-        self.valves = valves
-        self.size = len(valves)
-        self.adj = np.zeros([self.size, self.size], dtype=int)
-        self.__fill_adj__(self.valves['AA'], None, [])
-        self.current = 'AA'
-        self.flows = np.zeros(self.size)
-        for _, v in self.valves.items():
-            self.flows[v.index] = v.flow
-        self.worth = [i for i, flow in enumerate(self.flows) if flow > 0]
-
-    def __str__(self) -> str:
-        return self.adj.__str__()
-
-    def __fill_adj__(self, current, parent, visited):
-        for _, v in self.valves.items():
-            self.adj[v.index][v.index] = 0
-            for name in v.conn:
-                next = self.valves[name].index
-                self.adj[v.index][next] = self.adj[next][v.index] = 1
-
-        for i in range(self.size):
-            for j in range(i, self.size):
-                self.adj[i][j] = self.adj[j][i] = self.__min_dist__(i, j, [])
-
-    def __min_dist__(self, i, j, visited):
-        if i == j:
-            return 0
-
-        if self.adj[i][j]:
-            return self.adj[i][j]
-        
-        neighbors = [ix for ix, d in enumerate(self.adj[i]) if d == 1]
-
-        visited.append(i)
-
-        dist = self.size
-        for ix in neighbors:
-            if ix in visited:
-                continue
-            d = self.__min_dist__(ix, j, visited)
-            if d + 1 < dist:
-                dist = d + 1
-
-        return dist
-
-    def find_best_path(self):
-        possible_paths = permutations(self.worth)
-        #self.generate_paths([], combinations)
-
-        best = 0 
-        best_path = []
-        for p in possible_paths:
-            val = self.eval_path(p)
-            if val > best:
-                best_path = p
-                best = val
-
-        return best, best_path        
-
-    def generate_paths(self, path, combinations):
-        if len(path) == len(self.worth):
-            combinations.append(deepcopy(path))
-            return
-        for i in self.worth:
-            if i not in path:
-                path.append(i)
-                self.generate_paths(path, combinations)
-                path.pop()
-
-    def eval_path(self, path):
-        current = 0
-        time_left = 30
-
-        contribution = 0
-        for index in path:
-            d = self.adj[current][index]
-            time_left -= d + 1
-            contribution += self.flows[index] * time_left
-            current = index
-
-        return contribution
-
-
-with open("input.txt", "r") as file:
-    
-    data = [line.strip() for line in file.readlines()]
-
-    valves = {}
-    i = 0
-    for line in data:
-        parts = line.split(';')
-        name = parts[0].split()[1]
-        flow = int(parts[0].split('=')[1])
-        tunnels_part = parts[1].split()
-        tunnels = []
-        for v in tunnels_part[4:]:
-            tunnels.append(v.strip()[:2])
-
-        valves[name] = Valve(name, flow, tunnels, i)
-        i += 1
-
-    #best = optimize_pressure_2(valves, 30)
-    graph = Tunnels(valves)
-    print(graph)
-    best, path = graph.find_best_path()
-    print(path, best)
-
-    #print(graph.adj[0])
