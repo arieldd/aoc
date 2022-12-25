@@ -2,7 +2,6 @@ import numpy as np
 np.set_printoptions(threshold=np.inf, linewidth=np.nan)
 
 from copy import deepcopy
-from itertools import permutations 
 
 class Valve:
     def __init__(self, name, flow, edges, index) -> None:
@@ -121,6 +120,8 @@ class Path:
 
         self.valves.update({ time : next })
 
+        self.pressure = 0
+
     def __len__(self):
         return len(self.valves)
 
@@ -142,47 +143,6 @@ class Path:
             name = self.valves[t]
             valve = graph.valves[name]
             result.append(valve.index)
-
-        return result
-class DoublePath:
-
-    def __init__(self, time, for_me, for_elephant, path = None) -> None:
-        self.mine = {}
-        self.elephant = {}
-        if path:
-            self.mine = deepcopy(path.mine)
-            self.elephant = deepcopy(path.elephant)
-
-        if for_me:
-            self.mine.update( {time : for_me} )
-        if for_elephant:
-            self.elephant.update( {time : for_elephant} )
-
-    def __len__(self):
-        return len(self.mine) + len(self.elephant)
-
-    def __str__(self) -> str:
-        return self.mine.__str__() + '\n' + self.elephant.__str__() + '\n'
-
-    def last_opened(self, for_elephant = False):
-        dict = self.mine if not for_elephant else self.elephant
-
-        time = 0
-        for t in dict:
-            if t > time:
-                time = t
-
-        return time, dict[time]
-    
-    def build_paths(self, graph):
-        result = [[], []]
-        dicts = [self.mine, self.elephant]
-        for ix, d in enumerate(dicts):
-            times = sorted(list(d.keys()))
-            for t in times[1:]:
-                name = d[t]
-                valve = graph.valves[name]
-                result[ix].append(valve.index)
 
         return result
 
@@ -210,139 +170,85 @@ def most_pressure(graph, endTime):
             for name in openable:
                 if name in p.valves.values():
                     continue
-                paths.append(Path(name, time, p))
+                paths.append(Path(name, time + 1, p))
         
         if full == len(paths):
             break #No more to explore
 
         time += 1
 
-    best = 0
+    best , best_path = 0, None
     start_index = graph.valves[start].index
     for p in paths:
         indices = p.build_path(graph)
         val = graph.eval_path(indices, endTime, start_index)
         if val > best:
             best = val
+            best_path = p
 
-    return best
+    return best, best_path
 
-def most_double_pressure(graph, endTime):
+def most_pressure_2(graph, endTime):
 
     start = 'AA'
 
     time = 1
-    paths = [DoublePath(time, start, start)]
+    paths = [Path(start, time)]
 
-    total_valves_to_open = len(graph.worth) + 2
+    total_valves_to_open = len(graph.worth) + 1
 
     while time <= endTime:
 
         current_paths = list(paths)
         full = 0
         for p in current_paths:
-            if len(p) >= total_valves_to_open:
+            if len(p) == total_valves_to_open:
                 full += 1
                 continue
 
-            t_mine, last_mine = p.last_opened()
-            t_elephant, last_elephant = p.last_opened(for_elephant=True)
-            valve_mine = graph.valves[last_mine]
-            valve_elephant = graph.valves[last_elephant]
-            
-            openable_mine = find_openable(graph, t_mine, time, valve_mine)
-            openable_mine = [name for name in openable_mine if name not in p.mine.values() and name not in p.elephant.values()]
-            
-            openable_elephant = find_openable(graph, t_elephant, time, valve_elephant)
-            openable_elephant = [name for name in openable_elephant if name not in p.mine.values() and name not in p.elephant.values()]
-
-            for name_mine in openable_mine:
-                paths.append(DoublePath(time, name_mine, None, p))
-                        
-            for name_elephant in openable_elephant:
-                paths.append(DoublePath(time, None, name_elephant, p))
-
-            for name_mine in openable_mine:
-                for name_elephant in openable_elephant:
-                    if name_elephant == name_mine:
-                        continue
-                    paths.append(DoublePath(time, name_mine, name_elephant, p))
-
-            
+            t, last = p.last_opened()
+            valve = graph.valves[last]
+            openable = find_openable(graph, t, time, valve)
+            for name in openable:
+                if name in p.valves.values():
+                    continue
+                paths.append(Path(name, time + 1, p))
+        
         if full == len(paths):
             break #No more to explore
 
         time += 1
 
-    best = 0
     start_index = graph.valves[start].index
+
     for p in paths:
-        [ix_mine, ix_elephant ]= p.build_paths(graph)
-        val_mine = graph.eval_path(ix_mine, endTime, start_index)
-        val_elephant = graph.eval_path(ix_elephant, endTime, start_index)
-        val = val_mine + val_elephant
+        indices = p.build_path(graph)
+        val = graph.eval_path(indices, endTime, start_index)
+        p.pressure = val
 
-        if val > best:
-            #print(p, val_mine, val_elephant)
-            best = val
+    print('Starting scan ....')
 
-    return best
+    paths = [p for p in paths if p.pressure > 1000]
+    paths.sort(key=lambda x: x.pressure, reverse=True)
+    best_sum, best_pair = 0, [None, None]
 
-def greedy_double_pressure(graph, endTime):
+    total_paths = len(paths)
 
-    total_valves_to_open = len(graph.worth)
-
-    pos_mine = 'AA'
-    pos_eleph = 'AA'
-
-    time_mine = time_eleph = 0
-    opened = 0
-    pressure = 0
-    while opened < total_valves_to_open:
-        [vm,cm,dm] = graph.get_max_contributions(pos_mine, time_mine, endTime)
-        [ve,ce,de] = graph.get_max_contributions(pos_eleph, time_eleph, endTime)
-
-        if ce <= cm:
-            print(vm.name, cm, dm)
-            vm.open = True
-            opened +=1 
-            pos_mine = vm.name
-            time_mine += (dm + 1)
-            pressure += cm
-    
-            if opened == total_valves_to_open:
-                break
-
-            [ve,ce,de] = graph.get_max_contributions(pos_eleph, time_eleph, endTime)
-
-            print(ve.name, ce, de)
-            ve.open = True
-            opened +=1  
-            pos_eleph = ve.name
-            time_eleph += (de + 1)
-            pressure += ce
+    print(total_paths)
+    for ix, p1 in enumerate(paths):
         
-        else:
-            print(ve.name, ce, de)
-            ve.open = True
-            opened +=1 
-            pos_eleph = ve.name
-            time_eleph += (de + 1)
-            pressure += ce
-        
-            if opened == total_valves_to_open:
-                break
-            
-            [vm,cm,dm] = graph.get_max_contributions(pos_mine, time_mine, endTime)
+        valve_set = set(list(p1.valves.values())[1:])
+        if ix % 1000 == 0:
+            print(ix, best_sum)
 
-            print(vm.name, cm, dm)
-            vm.open = True
-            opened +=1 
-            pos_mine = vm.name
-            time_mine += (dm + 1)
-            pressure += cm
-    
-    return pressure
+        possible = [p for p in paths if valve_set.isdisjoint(p.valves.values())]
+        for p2 in possible:
+            sum = p1.pressure + p2.pressure
+            if sum > best_sum:
+                best_sum = sum
+                best_pair = [p1, p2]
+
+    return best_sum, best_pair
 
 def find_openable(graph, t1, t2, valve):
     d = t2 - t1
@@ -378,7 +284,24 @@ with open("input.txt", "r") as file:
     graph = Tunnels(valves)
 
     # Part 1
-    #pressure = most_pressure(graph, 30)
-    pressure = most_double_pressure(graph, 26)
-    #pressure = greedy_double_pressure(graph, 26)
+    pressure, _ = most_pressure(graph, 30)
     print(pressure)
+
+    # Part 2
+    pressure, [p1, p2] = most_pressure_2(graph, 26)
+    print(graph.worth)
+    print(p1.pressure, p1, p2.pressure, p2)
+    print(pressure)
+
+    # p1 = [7, 46, 25, 17, 31, 4, 28]
+    # p2 = [47, 29, 38, 22, 41, 39]
+    # print(graph.eval_path(p1, 26, 16))
+    # print(graph.eval_path(p2, 26, 16))
+
+    # current = 16
+    # for ix in p2:
+    #     print(graph.adj[current, ix])
+    #     current = ix
+
+    # #print(eval('23 * 8 + 20 * 11 + 17 * 23 + 21 * 14 + 8 * 18 + 5 * 12 + 2 * 9'))
+    # print(eval('23 * 4 + 20 * 25+ 16 * 20 + 13 * 22 + 6 * 3'))
