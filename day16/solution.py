@@ -3,6 +3,7 @@ np.set_printoptions(threshold=np.inf, linewidth=np.nan)
 
 from copy import deepcopy
 from itertools import permutations 
+
 class Valve:
     def __init__(self, name, flow, edges, index) -> None:
         self.name = name
@@ -22,6 +23,9 @@ class Valve:
             return self.name == other.name
         return False
 
+    def __hash__(self) -> int:
+        return self.name.__hash__()
+
     def worth(self):
         return self.flow > 0 and not self.open
 
@@ -31,7 +35,6 @@ class Tunnels:
         self.size = len(valves)
         self.adj = np.zeros([self.size, self.size], dtype=int)
         self.__fill_adj__()
-        self.current = 'AA'
         self.flows = np.zeros(self.size, dtype=int)
         for _, v in self.valves.items():
             self.flows[v.index] = v.flow
@@ -72,66 +75,13 @@ class Tunnels:
 
         return dist
 
-    def find_best_path(self):
-        possible_paths = permutations(self.worth)
-        #self.generate_paths([], combinations)
-
-        best = 0 
-        best_path = []
-        for p in possible_paths:
-            val = self.eval_path(p)
-            if val > best:
-                best_path = p
-                best = val
-
-        return best, best_path        
-
-    def __worth__(self):
-        return  [v for v in valves.values() if v.worth()]
-
-    def optimize_pressure(self):
-        time_left = 30
-        current = self.valves['AA']
-
-        total_pressure = 0
-        while time_left:
-            
-            best = None
-            worth = self.__worth__()
-            for valve in worth:
-                d = self.adj[current.index][valve.index]
-
-                if time_left - d - 1 < 0:
-                    continue
-
-                if not best:
-                    best = valve
-                    continue
-
-                bd= self.adj[current.index][best.index]
-                if (d >= bd and valve.flow > best.flow * (d - bd + 1)) \
-                or (d < bd and valve.flow * (bd - d + 1) > best.flow):
-                    best = valve
-
-            if not best:
-                return total_pressure
-
-            valve = best
-            print(valve.name)
-            d = self.adj[current.index][valve.index]
-            total_pressure += valve.flow * (time_left - d - 1)
-
-            valve.open = True
-            current = valve
-
-            time_left -= (d + 1)
-        
-        return total_pressure
-
-    def get_contributions(self, current, time_left):
-        worth = self.__worth__()
+    def get_max_contributions(self, current_name, time, endTime):
+        worth = [v for v in graph.valves.values() if v.flow > 0 and not v.open]
        
-        result = {}
+        time_left = endTime -  time
+
+        current = graph.valves[current_name]
+        result = [None, 0, 0]
         for valve in worth:
             d = self.adj[current.index][valve.index]
             
@@ -141,23 +91,17 @@ class Tunnels:
                 continue
 
             contribution = valve.flow * time
-            result[valve.name] = (contribution, d)
+            if contribution > result[1]:
+                result = [valve, contribution, d]
 
         return result
 
-    def generate_paths(self, path, combinations):
-        if len(path) == len(self.worth):
-            combinations.append(deepcopy(path))
-            return
-        for i in self.worth:
-            if i not in path:
-                path.append(i)
-                self.generate_paths(path, combinations)
-                path.pop()
+    def eval_path(self, path, endTime, start = 0):
+        if not path:
+            return 0
 
-    def eval_path(self, path, start = 0):
         current = start
-        time_left = 30
+        time_left = endTime
 
         contribution = 0
         for index in path:
@@ -168,6 +112,249 @@ class Tunnels:
 
         return contribution
 
+class Path:
+
+    def __init__(self, next, time, path = None) -> None:
+        self.valves = {}
+        if path:
+            self.valves = deepcopy(path.valves)
+
+        self.valves.update({ time : next })
+
+    def __len__(self):
+        return len(self.valves)
+
+    def __str__(self) -> str:
+        return self.valves.__str__()
+
+    def last_opened(self):
+        time = 0
+        for t in self.valves:
+            if t > time:
+                time = t
+
+        return time, self.valves[time]
+
+    def build_path(self, graph):
+        result = []
+        times = sorted(list(self.valves.keys()))
+        for t in times[1:]:
+            name = self.valves[t]
+            valve = graph.valves[name]
+            result.append(valve.index)
+
+        return result
+class DoublePath:
+
+    def __init__(self, time, for_me, for_elephant, path = None) -> None:
+        self.mine = {}
+        self.elephant = {}
+        if path:
+            self.mine = deepcopy(path.mine)
+            self.elephant = deepcopy(path.elephant)
+
+        if for_me:
+            self.mine.update( {time : for_me} )
+        if for_elephant:
+            self.elephant.update( {time : for_elephant} )
+
+    def __len__(self):
+        return len(self.mine) + len(self.elephant)
+
+    def __str__(self) -> str:
+        return self.mine.__str__() + '\n' + self.elephant.__str__() + '\n'
+
+    def last_opened(self, for_elephant = False):
+        dict = self.mine if not for_elephant else self.elephant
+
+        time = 0
+        for t in dict:
+            if t > time:
+                time = t
+
+        return time, dict[time]
+    
+    def build_paths(self, graph):
+        result = [[], []]
+        dicts = [self.mine, self.elephant]
+        for ix, d in enumerate(dicts):
+            times = sorted(list(d.keys()))
+            for t in times[1:]:
+                name = d[t]
+                valve = graph.valves[name]
+                result[ix].append(valve.index)
+
+        return result
+
+def most_pressure(graph, endTime):
+
+    start = 'AA'
+
+    time = 1
+    paths = [Path(start, time)]
+
+    total_valves_to_open = len(graph.worth) + 1
+
+    while time <= endTime:
+
+        current_paths = list(paths)
+        full = 0
+        for p in current_paths:
+            if len(p) == total_valves_to_open:
+                full += 1
+                continue
+
+            t, last = p.last_opened()
+            valve = graph.valves[last]
+            openable = find_openable(graph, t, time, valve)
+            for name in openable:
+                if name in p.valves.values():
+                    continue
+                paths.append(Path(name, time, p))
+        
+        if full == len(paths):
+            break #No more to explore
+
+        time += 1
+
+    best = 0
+    start_index = graph.valves[start].index
+    for p in paths:
+        indices = p.build_path(graph)
+        val = graph.eval_path(indices, endTime, start_index)
+        if val > best:
+            best = val
+
+    return best
+
+def most_double_pressure(graph, endTime):
+
+    start = 'AA'
+
+    time = 1
+    paths = [DoublePath(time, start, start)]
+
+    total_valves_to_open = len(graph.worth) + 2
+
+    while time <= endTime:
+
+        current_paths = list(paths)
+        full = 0
+        for p in current_paths:
+            if len(p) >= total_valves_to_open:
+                full += 1
+                continue
+
+            t_mine, last_mine = p.last_opened()
+            t_elephant, last_elephant = p.last_opened(for_elephant=True)
+            valve_mine = graph.valves[last_mine]
+            valve_elephant = graph.valves[last_elephant]
+            
+            openable_mine = find_openable(graph, t_mine, time, valve_mine)
+            openable_mine = [name for name in openable_mine if name not in p.mine.values() and name not in p.elephant.values()]
+            
+            openable_elephant = find_openable(graph, t_elephant, time, valve_elephant)
+            openable_elephant = [name for name in openable_elephant if name not in p.mine.values() and name not in p.elephant.values()]
+
+            for name_mine in openable_mine:
+                paths.append(DoublePath(time, name_mine, None, p))
+                        
+            for name_elephant in openable_elephant:
+                paths.append(DoublePath(time, None, name_elephant, p))
+
+            for name_mine in openable_mine:
+                for name_elephant in openable_elephant:
+                    if name_elephant == name_mine:
+                        continue
+                    paths.append(DoublePath(time, name_mine, name_elephant, p))
+
+            
+        if full == len(paths):
+            break #No more to explore
+
+        time += 1
+
+    best = 0
+    start_index = graph.valves[start].index
+    for p in paths:
+        [ix_mine, ix_elephant ]= p.build_paths(graph)
+        val_mine = graph.eval_path(ix_mine, endTime, start_index)
+        val_elephant = graph.eval_path(ix_elephant, endTime, start_index)
+        val = val_mine + val_elephant
+
+        if val > best:
+            #print(p, val_mine, val_elephant)
+            best = val
+
+    return best
+
+def greedy_double_pressure(graph, endTime):
+
+    total_valves_to_open = len(graph.worth)
+
+    pos_mine = 'AA'
+    pos_eleph = 'AA'
+
+    time_mine = time_eleph = 0
+    opened = 0
+    pressure = 0
+    while opened < total_valves_to_open:
+        [vm,cm,dm] = graph.get_max_contributions(pos_mine, time_mine, endTime)
+        [ve,ce,de] = graph.get_max_contributions(pos_eleph, time_eleph, endTime)
+
+        if ce <= cm:
+            print(vm.name, cm, dm)
+            vm.open = True
+            opened +=1 
+            pos_mine = vm.name
+            time_mine += (dm + 1)
+            pressure += cm
+    
+            if opened == total_valves_to_open:
+                break
+
+            [ve,ce,de] = graph.get_max_contributions(pos_eleph, time_eleph, endTime)
+
+            print(ve.name, ce, de)
+            ve.open = True
+            opened +=1  
+            pos_eleph = ve.name
+            time_eleph += (de + 1)
+            pressure += ce
+        
+        else:
+            print(ve.name, ce, de)
+            ve.open = True
+            opened +=1 
+            pos_eleph = ve.name
+            time_eleph += (de + 1)
+            pressure += ce
+        
+            if opened == total_valves_to_open:
+                break
+            
+            [vm,cm,dm] = graph.get_max_contributions(pos_mine, time_mine, endTime)
+
+            print(vm.name, cm, dm)
+            vm.open = True
+            opened +=1 
+            pos_mine = vm.name
+            time_mine += (dm + 1)
+            pressure += cm
+    
+    return pressure
+
+def find_openable(graph, t1, t2, valve):
+    d = t2 - t1
+
+    result = []
+    for v in graph.valves.values():
+        if  v == valve:
+            continue
+        if v.worth() and graph.adj[valve.index, v.index] ==  d:
+            result.append(v.name)
+
+    return result
 
 with open("input.txt", "r") as file:
     
@@ -190,237 +377,8 @@ with open("input.txt", "r") as file:
     #best = optimize_pressure_2(valves, 30)
     graph = Tunnels(valves)
 
-    p = graph.optimize_pressure()
-    print(p)
-
-    print(graph.eval_path([7, 31, 46, 25, 17, 28, 4], 16))
-    
-    #best, path = graph.find_best_path()
-    # print(path, best)
-
-    #print(graph.adj[0])
-
-#    class Path:
-#     def __init__(self) -> None:
-#         self.nodes = []
-#         self.val = -1
-        
-#     def length(self):
-#         return len(self.nodes)
-
-#     def time_consumed(self):
-#         l = 0
-#         for (_, open) in self.nodes: 
-#             l += 2 if open else 1
-#         return l
-
-#     def add(self, valve, will_open):
-#         self.nodes.append((valve, will_open))
-
-#     def pop(self):
-#         self.nodes.pop()
-
-#     def contains(self, name):
-#         return any([x[0].name == name for x in self.nodes])
-
-#     def released_pressure(self):
-#         time = self.time_consumed()
-#         l = self.length()
-#         pressures = [0]
-#         i = 0
-#         p = 0
-#         for _ in range(1, time):
-#             if i < l:
-#                 (v, o) = self.nodes[l - i - 1]
-#                 if o:
-#                     pressures.append(v.flow)
-#                     time +=1
-#             p += sum(pressures)
-
-#         return p
-
-#     def eval(self, time, end):
-#         if not len(self.nodes):
-#             return -1
-
-#         time = time + self.time_consumed()
-#         eval = 0
-#         time -= 1
-
-#         for (valve, should_open) in self.nodes:
-
-#             mult = end - time
-#             if should_open:
-#                 eval += valve.flow * mult
-
-#                 time -= 1
-
-#             time -= 1
-
-#         self.val = eval
-#         return eval
-
-#     def clone(self):
-#         result = Path()
-#         result.val = self.val
-#         result.nodes = deepcopy(self.nodes)
-#         return result
-
-#     def print_path(self):
-#         print('[', end='')
-#         for (v, open) in reversed(self.nodes):
-#             text = v.name if open else str.lower(v.name)
-#             print(text, end=',')
-#         print(f']') 
-
-# def best_path(src, dst, current, valves, time, endTime, path):
-#     if time + path.time_consumed() > endTime:
-#         return None
-
-#     bst_path = None
-#     bst_val = -1
-#     for adj in current.conn:    
-#         if path.contains(adj):
-#             continue
-
-#         if adj == src.name:
-#             v1 = path.eval(time, endTime)
-            
-#             if v1 > bst_val:
-#                 bst_val = v1
-#                 bst_path = path.clone()
-#             continue
-
-#         valve = valves[adj]
-#         will_open = valve.worth() and valve.flow * path.length() > dst.flow
-
-#         path.add(valve, will_open)
-#         p = best_path(src, dst, valve, valves, time, endTime, path)
-#         if p:
-#             v2 = p.eval(time, endTime)
-
-#             if v2 > bst_val:
-#                 bst_val = v2
-#                 bst_path = p.clone()    
-
-#         path.pop()
-
-#     return bst_path
-
-# def open_along_path(valves, path):
-#     if not len(path):
-#         return
-
-#     for (v, should_open) in path:
-#         if should_open:
-#             valves[v.name].open = True
-
-# def find_best_path(valves, dst, current, path, time, end, visited):
-#     if current.name == dst.name:
-#         return deepcopy(path), eval_path(path, time, end)
-
-#     if time >= end:
-#         return [], -1
-
-#     best_path = []
-#     best_value = -1
-#     for adj in current.conn:
-#         if adj in visited:
-#             continue
-        
-#         v = valves[adj]
-#         visited.append(adj)
-
-#         for should_open in reversed(range(2)):
-#             if should_open and not v.worth(): #don't consider opening opened or 0 valve
-#                 continue
-
-#             path.append((v, should_open))
-#             p, val = find_best_path(valves, dst, v, path, time + 1 + should_open, end, visited)
-            
-#             #print(current.name, '->', v.name, val)
-
-#             if val > best_value or len(p) < len():
-#                 best_path = p
-#                 best_value = val
-
-#             path.pop()
-
-#             #Don't consider not turning on last valve
-#             if adj == dst.name:
-#                 break
-
-#         visited.pop()
-
-#     return best_path, best_value
-
-# def print_path(path):
-#     print('[', end='')
-#     for (v, open) in path:
-#         text = v.name if open else str.lower(v.name)
-#         print(text, end=',')
-#     print(']')   
-
-# def eval_path(path, time, end):
-
-#     if not len(path):
-#         return -1
-
-#     eval = 0
-#     time -= 1
-#     for (valve, should_open) in reversed(path):
-        
-#         mult = end - time
-#         if should_open:
-#             eval += valve.flow * mult
-
-#             time -= 1
-
-#         time -= 1
-
-#     return eval
-
-# def time_consumed(path):
-#     time = 0
-#     for (_, open) in path:
-#         time += 2 if open else 1
-#     return time
-
-# def optimize_pressure(valves, endTime):
-   
-#     current = valves['AA']
-#     pressure = 0
-#     time = 1
-#     while time <= endTime:
-#         bst_path = []
-#         bst_val = -1
-#         bst_fitness = -1000
-#         print(f'Next at time {time}')
-#         for node in valves.values():
-#             if node.worth():
-#                 p, val = find_best_path(valves, node, current, [], time, endTime, [current.name])
-#                 #Scale path fitness by time consumed
-#                 fitness = val - sum(range(endTime - time - time_consumed(p), endTime - time + 1))
-#                 if fitness > bst_fitness:
-#                     bst_path = p
-#                     bst_val = val
-#                     bst_fitness = fitness
-
-#                 print(val, fitness)
-#                 print_path(p)
-
-#         if not len(bst_path):
-#             break
-
-#         timeConsumed = time_consumed(bst_path)
-#         print(current.name, '->', bst_path[-1][0].name, bst_val)
-#         print_path(bst_path)
-
-#         open_along_path(valves, bst_path)
-
-#         pressure += bst_val
-#         time += timeConsumed
-
-#         current = bst_path[-1][0]
-
-#     return pressure
+    # Part 1
+    #pressure = most_pressure(graph, 30)
+    pressure = most_double_pressure(graph, 26)
+    #pressure = greedy_double_pressure(graph, 26)
+    print(pressure)
