@@ -3,6 +3,10 @@ np.set_printoptions(threshold=np.inf, linewidth=np.nan)
 
 from copy import deepcopy
 
+import networkx as nx
+
+from collections import deque
+
 class Valve:
     def __init__(self, name, flow, edges, index) -> None:
         self.name = name
@@ -43,36 +47,19 @@ class Tunnels:
         return self.adj.__str__()
 
     def __fill_adj__(self):
-        for _, v in self.valves.items():
-            self.adj[v.index][v.index] = 0
-            for name in v.conn:
-                next = self.valves[name].index
-                self.adj[v.index][next] = self.adj[next][v.index] = 1
+        G = nx.Graph()
+        for name, v in self.valves.items():
+           for neighbor in v.conn:
+                G.add_edge(name, neighbor)
+                G.add_edge(neighbor, name)
 
-        for i in range(self.size):
-            for j in range(i, self.size):
-                self.adj[i][j] = self.adj[j][i] = self.__min_dist__(i, j, [])
+        for v1 in G.nodes():
+            for v2 in G.nodes():
+                if v1 != v2:
+                    ix1 = self.valves[v1].index
+                    ix2 = self.valves[v2].index
+                    self.adj[ix1, ix2] = self.adj[ix2, ix1] = len(nx.shortest_path(G,v1,v2))-1
 
-    def __min_dist__(self, i, j, visited):
-        if i == j:
-            return 0
-
-        if self.adj[i][j]:
-            return self.adj[i][j]
-        
-        neighbors = [ix for ix, d in enumerate(self.adj[i]) if d == 1]
-
-        visited.append(i)
-
-        dist = self.size
-        for ix in neighbors:
-            if ix in visited:
-                continue
-            d = self.__min_dist__(ix, j, visited)
-            if d + 1 < dist:
-                dist = d + 1
-
-        return dist
 
     def get_max_contributions(self, current_name, time, endTime):
         worth = [v for v in graph.valves.values() if v.flow > 0 and not v.open]
@@ -280,7 +267,6 @@ with open("input.txt", "r") as file:
         valves[name] = Valve(name, flow, tunnels, i)
         i += 1
 
-    #best = optimize_pressure_2(valves, 30)
     graph = Tunnels(valves)
 
     # Part 1
