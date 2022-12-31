@@ -1,5 +1,26 @@
 import numpy as np
 
+input_transitions = [
+        { 0 : [2, 0], 1: [3, 1], 2: [4, 0], 3:[6, 0] }, #Face 1
+        { 0 : [5, 2], 1: [3, 2], 2: [1, 2], 3:[6, 3] }, #Face 2
+        { 0 : [2, 3], 1: [5, 1], 2: [4, 1], 3:[1, 3] }, #Face 3
+        { 0 : [5, 0], 1: [6, 1], 2: [1, 0], 3:[3, 0] }, #Face 4
+        { 0 : [2, 2], 1: [6, 2], 2: [4, 2], 3:[3, 3] }, #Face 5
+        { 0 : [5, 3], 1: [2, 1], 2: [1, 1], 3:[4, 3] } #Face 6
+    ]
+
+test_transitions = [
+        { 0 : [6, 2], 1: [4, 1], 2: [3, 1], 3:[2, 1] }, #Face 1
+        { 0 : [3, 0], 1: [5, 1], 2: [6, 3], 3:[1, 1] }, #Face 2
+        { 0 : [4, 0], 1: [5, 0], 2: [2, 2], 3:[1, 0] }, #Face 3
+        { 0 : [6, 1], 1: [5, 1], 2: [3, 2], 3:[1, 3] }, #Face 4
+        { 0 : [6, 0], 1: [2, 3], 2: [3, 3], 3:[4, 3] }, #Face 5
+        { 0 : [1, 2], 1: [2, 0], 2: [5, 2], 3:[4, 2] } #Face 6
+    ]
+
+def is_valid_pos(i, j, size):
+    return 0 <= i < size and 0<= j < size
+
 def follow_path(map, moves):
     (h, w) = map.shape
 
@@ -59,71 +80,96 @@ def follow_path(map, moves):
     #draw_path(map, pos)
     return [r + 1, c + 1, facing]
 
-def follow_cube(map, moves, sides):
-    (h, w) = map.shape
+def follow_cube(moves, sides, transitions):
 
-    [r, c] =[0, map[0].nonzero()[0][0]]
+    size = sides.shape[1]
+    (r, c) = (0, 0)
     
-    pos ={(r,c) : 0}
     facing = 0
+
+    shifts = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+    current = 0
     for move in moves:
         if move < 0:
             next = 1 if move == -1 else -1
             facing = (facing + next) % 4
             continue
-        
+
         for _ in range(move):
-            if facing == 0: #Right
-                i = r
-                j = c + 1
-                if j >= w or not map[r][j]:
-                    [i, j, facing] = next_in_cube(r, c, facing, current_side, sides)
-                if map[i][j] == 2:
-                    break
-                r = i
-                c = j
+            delta = shifts[facing]
+            i,j = r + delta[0], c + delta[1]
+            new_side = current
+            new_dir = facing
 
-            if facing == 1: #Down
-                i = r + 1
-                if i >= h or not map[i][c]:
-                    i = 0
-                    while not map[i][c]:
-                        i += 1
-                if map[i][c] == 2:
-                    break
-                r = i
+            if not is_valid_pos(i, j, size):
+                (i, j), new_dir, new_side = next_in_cube(r, c, facing, current, transitions)
 
-            if facing == 2: #Left
-                j = c - 1
-                if j < 0 or not map[r][j]:
-                    j = w -1
-                    while not map[r][j]:
-                        j -= 1
-                if map[r][j] == 2:
-                    break
-                c = j
+            if sides[new_side, i, j][1] == 2:
+                break
+            
+            r = i
+            c = j
 
-            if facing == 3: # Up
-                i = r - 1
-                if i < 0 or not map[i][c]:
-                    i = h - 1
-                    while not map[i][c]:
-                        i -= 1
-                if map[i][c] == 2:
-                    break
-                r = i
+            current = new_side
+            facing = new_dir
 
-            pos[(r,c)] = facing
+    (row, column) = sides[current, r, c][0]
 
+    return row + 1, column + 1, facing
 
-input_transitions = [
-        { 0 : [2, 0, 1], 1: [3, 1, 1], 2: [4, 0, -1], 3:[6, 1, -1] }, #Face 1
-        { 0 : [5, 1, -1], 1: [3, 2, -1], 2: [1, 1, 1], 3:[6, 3, 1] }, #Face 2
-        { 0 : [2, 3, -1], 1: [5, 1, 1], 2: [4, 1, -1], 3:[1, 3, 1] }, #Face 3
-        { 0 : [5, 0, 1], 1: [6, 1, 1], 2: [1, 0, -1], 3:[3, 0, -1] }, #Face 4
-        { 0 : [2, 2, 1], 1: [6, 2, -1], 2: [4, 2, 1], 3:[3, 3, 1] }, #Face 5
-        { 0 : [5, 3, -1], 1: [2, 1, 1], 2: [1, 1, -1], 3:[4, 3, 1] }, #Face 6
-    ]
+def coord_transition(r, c, prev_facing, new_facing, size):
+    if prev_facing == 0:
+        if new_facing == 0:
+            return (r, 0)
+        if new_facing == 1:
+            return (0, size - 1 - r)
+        if new_facing == 2:
+            return (size - 1 - r , size -1)
+        return (size - 1, r)
+    
+    if prev_facing == 1:
+        if new_facing == 0:
+            return (size - 1 - c, 0)
+        if new_facing == 1:
+            return (0, c)
+        if new_facing == 2:
+            return (c , size -1)
+        return (size - 1,  size -1 - c)
+
+    if prev_facing == 2:
+        if new_facing == 0:
+            return (size -1 - r, 0)
+        if new_facing == 1:
+            return (0, r)
+        if new_facing == 2:
+            return (r , size -1)
+
+        return (size - 1, size -1 -r)
+    
+    if new_facing == 0:
+        return (c, 0)
+    if new_facing == 1:
+        return (0, size - 1 - c)
+    if new_facing == 2:
+        return (size - 1 - c , size - 1)
+
+    return (size - 1, c)
+
+def find_in_face(i, j, faces):
+    for ix in range(6):
+        if (i,j) in faces[ix]:
+            return ix
+    return -1
+
+def to_cube_coord(i, j, sides):
+    size = sides.shape[1]
+    for f in range(6):
+        for r in range(size):
+            for c in range(size):
+                if sides[f, r, c,] == (i, j):
+                    return (f, r, c)
+    print(i, j)
+    print(sides)
 
 def find_password(pos):
     return 1000 * pos[0] + 4 * pos[1] + pos[2]
@@ -182,7 +228,7 @@ def fold_cube(map, size):
     
     return cube
 
-def find_sides(cube, size):
+def find_sides(map, cube, size):
     [h, w] = cube.shape
     sides = np.zeros([6, size, size], dtype=tuple)
 
@@ -190,16 +236,16 @@ def find_sides(cube, size):
     for i in range(h):
         for j in range(w):
             f = cube[i,j]
-            if not f:
+            if f == 0:
                 continue
 
             count = faces[f -1]
+
             k = count // size
             l = count % size
-            sides[f-1, k, l] = (i, j)
+            sides[f-1, k, l] = [(i, j), map[i,j]]
             faces[f-1] += 1
 
-    print(sides)
     return sides
 
 def draw_cube(cube):
@@ -214,29 +260,15 @@ def draw_cube(cube):
             print(text, end='')
         print()
 
-def next_in_cube(r, c, f, current, sides):
-    
-    size = sides.shape[1]
-    switch = input_transitions[current][f]
-    next_face = sides[switch[0] - 1]
-    next_direction = switch[1]
-    nr = r
-    nc = c
-    
-    if f == next_direction: #Same direction
-        if f % 2 == 0:
-            nc = size - 1 - c
-        else:
-            nr = size - 1 - r
-    elif abs(next_direction - f) % 2 == 0: #Opposite directions
-        if f % 2 == 0:
-            nr = size - 1 - r
-        else:
-            nc = size - 1 - c
-    else:
-        pass
+def next_in_cube(r, c, f, current, transitions):
 
-    return (next_face[nr, nc], next_direction)
+    switch = transitions[current][f]
+    next_side = switch[0] - 1
+    next_f = switch[1]
+    
+    (nr, nc) = coord_transition(r, c, f, next_f, size)
+
+    return (nr, nc), next_f, next_side
 
 def draw_path(map, pos):
     [h,w] = map.shape
@@ -262,7 +294,7 @@ def draw_path(map, pos):
             print(text, end='')
         print()
 
-with open("test.txt", "r") as file:
+with open("input.txt", "r") as file:
     
     data = [line for line in file.readlines()]
 
@@ -286,7 +318,11 @@ with open("test.txt", "r") as file:
 
     print(find_password([r, c, f]))
 
-    cube = fold_cube(map, 4)
-    print(cube)
-    sides = find_sides(cube, 4)
-    [r, c, f] = follow_cube(map, moves, sides)
+    size = 50
+    cube = fold_cube(map, size)
+    sides = find_sides(map, cube, size)
+    r, c, f = follow_cube(moves, sides, input_transitions)
+    
+    print(r, c, f)
+
+    print(find_password([r, c, f]))
