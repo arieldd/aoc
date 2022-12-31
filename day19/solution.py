@@ -49,7 +49,7 @@ class Blueprint:
             cost[robot - 1] = self.costs[robot][1]
         return cost
 
-    def find_max_geodes2(self, endTime):
+    def find_max_geodes(self, endTime):
         for robot in range(4):
             self.explore_build(robot, 0, endTime, Resource())
 
@@ -68,27 +68,21 @@ class Blueprint:
         while time < endTime:
 
             cost = self.get_cost(robot)
-            if resource.can_build(cost):
+            if resource.can_build(cost):                
                 for next_robot in range(4):
-                    new_r = update(resource, robot, cost)
+                    new_r = deepcopy(resource)
+
+                    new_r.spend_minerals(cost)
+                    new_r.collect_minerals()
+                    new_r.build_robot(robot, time) 
+
                     self.explore_build(next_robot, time + 1, endTime, new_r)
                 return 
 
-            resource = update(resource, -1)
+            resource.collect_minerals()
             time += 1
         
         self.max = max(self.max, resource.mats[3])
-
-def update(resource, robot, cost = [0,0,0,0]):
-    new_r = deepcopy(resource)
-
-    new_r.spend_minerals(cost)
-    new_r.collect_minerals()
-
-    if robot != -1:
-        new_r.robots[robot] += 1
-
-    return new_r 
 
 def interval_sum(a, b):
     return (b - a) * (a + b) // 2
@@ -109,7 +103,7 @@ with open("input.txt", "r") as file:
     
     data = [line.strip() for line in file.readlines()]
 
-    endTime = 24
+    endTime = 32
 
     blueprints = {}
     
@@ -129,18 +123,18 @@ with open("input.txt", "r") as file:
         blueprints[bp_id] = Blueprint(bp_id, costs)
         if not check_ids or bp_id in check_ids:
             print(bp_id, costs)
-            blueprints[bp_id].find_max_geodes2(endTime)
+            blueprints[bp_id].find_max_geodes(endTime)
             print(blueprints[bp_id].max)
         
     #Part 1
-    q = find_quality_levels(blueprints)
+    # q = find_quality_levels(blueprints)
 
-    print(q, sum(q))
+    # print(q, sum(q))
 
     #Part 2
-    # mult = 1
-    # for id in check_ids:
-    #     mult *= blueprints[id].max
+    mult = 1
+    for id in check_ids:
+        mult *= blueprints[id].max
 
-    # print(mult)
+    print(mult)
     
