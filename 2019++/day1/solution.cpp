@@ -37,7 +37,7 @@ int part2(std::vector<int> modules){
         required = mass;
         for(;;){
             required = required / 3 - 2;
-            if(required < 0)
+            if(required <= 0)
                 break;
             total += required;
         }
