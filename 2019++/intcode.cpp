@@ -2,20 +2,14 @@
 
 namespace IntCode{
     void run_program(program_t & intcode){
-        int result, size;
-        for(auto it = intcode.code.begin(); it < intcode.code.end(); it += size){
+        int result, jmp_size;
+        for(auto it = intcode.code.begin(); it < intcode.code.end(); ){
             instr_t instr = decode_instruction(it);
-
-            size = instr_set[instr.op];
 
             if (instr.op == end)
                 break;
 
-            for (int i = 1; i < size; i++){
-                instr.params.push_back(*(it + i));    
-            }
-
-            execute_instruction(instr, intcode);
+           it += execute_instruction(instr, intcode, it);
         }
     }
 
@@ -39,9 +33,9 @@ namespace IntCode{
             return ret;
         }
 
-        int size = instr_set[ret.op];
+        int jmp_size = instr_set[ret.op];
 
-        for (int i = 1; i < size; i++){
+        for (int i = 1; i < jmp_size; i++){
             ret.params.push_back(*(instr_pointer + i));    
         }
 
@@ -68,11 +62,13 @@ namespace IntCode{
         return instr_vals;
     }
 
-    void execute_instruction(const instr_t& instr, program_t& intcode){
-            int op1, op2;
+    int execute_instruction(const instr_t& instr, program_t& intcode, std::vector<int>::iterator& instr_pointer){
             
             auto instr_vals = load_instruction(instr, intcode);
 
+            int jmp_size = instr_set[instr.op];
+
+            int op1, op2;
             switch (instr.op)
             {
             case add:
@@ -88,10 +84,60 @@ namespace IntCode{
 
                 intcode.code[instr.params[2]] = op1 * op2;
                 break;
-            
+
+            case input:
+                int value;
+                std::cout << "Please introduce input value:" << std::endl;
+                std::cin >> value;
+
+                op1 = instr.params[0];
+
+                intcode.code[op1] = value;
+                break;
+
+            case output:
+                std::cout << "Output: " << instr_vals[0] << std::endl;
+                break;
+
+            case jmp_t:
+                op1 = instr_vals[0];
+                op2 = instr_vals[1];
+                
+                if(op1){
+                    instr_pointer = std::next(intcode.code.begin(), op2);
+                    jmp_size = 0;   
+                }   
+                break;
+
+            case jmp_f:
+                op1 = instr_vals[0];
+                op2 = instr_vals[1];
+                
+                if( ! op1){
+                    instr_pointer = std::next(intcode.code.begin(), op2);
+                    jmp_size = 0;
+                }   
+                break;
+
+            case lt:
+                op1 = instr_vals[0];
+                op2 = instr_vals[1];
+
+                intcode.code[instr.params[2]] = (op1 < op2) ? 1 : 0;
+                break;
+
+            case eq:
+                op1 = instr_vals[0];
+                op2 = instr_vals[1];
+
+                intcode.code[instr.params[2]] = (op1 == op2) ? 1 : 0;
+                break;
+
             default: //99 end
                 break;
             }
+
+        return jmp_size;
     }
 
     void print_program(const program_t & intcode){
