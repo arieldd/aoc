@@ -14,13 +14,12 @@ std::vector<std::string> parse_input(const std::string &file_name) {
   std::string line;
   while (std::getline(fs, line)) {
     ret.push_back(line);
-    std::cout << ret.back() << std::endl;
   }
   return ret;
 }
 
 bool is_visible(std::vector<std::vector<int>> &map, int row, int column) {
-  int n = map.size(), height = map[row][column];
+  int n = map.size(), m = map.front().size(), height = map[row][column];
 
   int i = row - 1;
   for (; i >= 0; i--)
@@ -47,21 +46,48 @@ bool is_visible(std::vector<std::vector<int>> &map, int row, int column) {
     return true;
 
   i = column + 1;
-  for (; i < n; i++)
+  for (; i < m; i++)
     if (map[row][i] >= height)
       break;
 
-  return i == n;
+  return i == m;
+}
+
+int scenic_score(std::vector<std::vector<int>> &map, int row, int column) {
+  int n = map.size(), m = map.front().size(), height = map[row][column],
+      view_distance, result = 1;
+
+  std::vector<int> dy{0, -1, 0, 1}, dx{-1, 0, 1, 0};
+
+  for (auto i = 0; i < 4; i++) {
+    view_distance = 0;
+    auto x = column, y = row;
+    for (;;) {
+      x += dx[i];
+      y += dy[i];
+
+      if (x < 0 || y < 0 || x >= m || y >= n)
+        break;
+
+      view_distance++;
+
+      if (map[y][x] >= height)
+        break;
+    }
+    result *= view_distance;
+  }
+
+  return result;
 }
 
 int part1(std::vector<std::vector<int>> &map) {
 
-  int n = map.size(), visible_trees = n * 4 - 4;
+  int r = map.size(), c = map.front().size(),
+      visible_trees = r * 2 + (c - 2) * 2;
 
-  for (int i = 1; i < n - 1; i++) {
-    for (int j = 1; j < n - 1; j++) {
+  for (int i = 1; i < r - 1; i++) {
+    for (int j = 1; j < c - 1; j++) {
       if (is_visible(map, i, j)) {
-        // std::cout << map[i][j] << " (" << i << "," << j << ")" << std::endl;
         visible_trees++;
       }
     }
@@ -69,19 +95,33 @@ int part1(std::vector<std::vector<int>> &map) {
 
   return visible_trees;
 }
-int part2(std::vector<std::vector<int>> &map) { return 0; }
+int part2(std::vector<std::vector<int>> &map) {
+  int r = map.size(), c = map.front().size();
+
+  std::vector<int> scores;
+
+  for (int i = 1; i < r - 1; i++) {
+    for (int j = 1; j < c - 1; j++) {
+      scores.push_back(scenic_score(map, i, j));
+    }
+  }
+
+  return *std::max_element(scores.begin(), scores.end());
+}
 
 std::vector<std::vector<int>> read_map(std::vector<std::string> &lines) {
-  int n = lines.size();
-
   std::vector<std::vector<int>> result;
 
   for (auto &line : lines) {
-    result.push_back(std::vector<int>());
+    std::vector<int> row;
     for (auto &tree : line) {
-      int height = tree - '0';
-      result.back().push_back(height);
+      if (tree < '0')
+        continue;
+      auto height = tree - '0';
+      row.push_back(height);
     }
+
+    result.push_back(row);
   }
 
   return result;
@@ -101,7 +141,7 @@ int main() {
   // auto lines = parse_input("test.txt");
 
   auto map = read_map(lines);
-  //print_map(map);
+  // print_map(map);
 
   auto r1 = part1(map);
   std::cout << "Part 1: " << r1 << std::endl;
