@@ -53,6 +53,28 @@ bool is_visible(std::vector<std::vector<int>> &map, int row, int column) {
   return i == m;
 }
 
+bool is_visible_2(std::vector<std::vector<int>> &map, int row, int column){
+  int n = map.size(), m = map.front().size(), height = map[row][column];
+
+  std::vector<int> dy{0, -1, 0, 1}, dx{-1, 0, 1, 0};
+
+  for (auto i = 0; i < 4; i++) {
+    auto x = column, y = row;
+    for (;;) {
+      x += dx[i];
+      y += dy[i];
+
+      if (x < 0 || y < 0 || x >= m || y >= n)
+        return true;
+
+      if (map[y][x] >= height)
+        break;
+    }
+  }
+
+  return false;
+}
+
 int scenic_score(std::vector<std::vector<int>> &map, int row, int column) {
   int n = map.size(), m = map.front().size(), height = map[row][column],
       view_distance, result = 1;
@@ -87,7 +109,7 @@ int part1(std::vector<std::vector<int>> &map) {
 
   for (int i = 1; i < r - 1; i++) {
     for (int j = 1; j < c - 1; j++) {
-      if (is_visible(map, i, j)) {
+      if (is_visible_2(map, i, j)) {
         visible_trees++;
       }
     }
