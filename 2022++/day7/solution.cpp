@@ -2,51 +2,155 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <map>
 #include <numeric>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 using namespace std;
 
-struct FsNode {
+struct File {
   string name;
-  int size;
-  FsNode *parent;
 
-  unordered_map<string, int> children;
+  int size = 0;
 
-  FsNode(const string &name, int size, FsNode *parent)
-      : name(name), size(size), parent(parent) {}
+  File *parent = nullptr;
 
-  FsNode() {}
+  map<string, File *> contents;
+
+  int getSize() {
+    if (size == 0) {
+      for (auto &pair : contents) {
+        size += pair.second->getSize();
+      }
+    }
+    return size;
+  }
+
+  bool is_dir() { return contents.size() > 0; }
+
+  int sumMaxSize(int max_size) {
+    if (!is_dir())
+      return 0;
+
+    int sum = 0;
+    for (auto &pair : contents) {
+      sum += pair.second->sumMaxSize(max_size);
+    }
+
+    if (size <= max_size)
+      sum += size;
+
+    return sum;
+  }
+
+  int findDirToDelete(int required_space) {
+    int min_size = INT32_MAX;
+
+    if (!is_dir())
+      return min_size;
+
+    for (auto &pair : contents) {
+      auto tmp = pair.second->findDirToDelete(required_space);
+      if (tmp < min_size)
+        min_size = tmp;
+    }
+
+    if (size >= required_space && size < min_size)
+      min_size = size;
+
+    return min_size;
+  }
 };
 
-int calculate_size(FsNode &node, vector<FsNode> &file_system) {
-  if (!node.size && node.children.size()) {
-    for (const auto &child : node.children) {
-      node.size += calculate_size(file_system[child.second], file_system);
+void print_tree(File *root, int tabs);
+
+int is_command(const string &line) {
+  if (line.find('$') == string::npos)
+    return 0;
+
+  return line.find("cd");
+}
+
+tuple<string, int> parse_file(const string &line) {
+  int pos = line.find(' '), size = 0;
+
+  if (line.find("dir") != 0) {
+    size = stoi(line.substr(0, pos));
+  }
+
+  auto name = line.substr(pos + 1);
+
+  return {name, size};
+}
+
+File *read_file_system(vector<string> output) {
+  auto root = new File;
+  root->name = "/";
+
+  File *current = root;
+
+  int index = 0;
+  for (auto &line : output) {
+
+    // cout << index++ << " " << current->name << endl;
+    auto cd = is_command(line);
+    if (cd) {
+      if (cd < 0)
+        continue; // ls
+
+      auto dir_name = line.substr(cd + 3);
+
+      if (dir_name == "..") {
+        if (current->parent != nullptr)
+          current = current->parent;
+        continue;
+      }
+
+      if (dir_name == root->name) {
+        current = root;
+        continue;
+      }
+
+      current = current->contents[dir_name];
+
+    } else {
+
+      auto data = parse_file(line);
+      auto name = get<0>(data);
+      auto size = get<1>(data);
+
+      if (current->contents.find(name) != current->contents.end())
+        continue;
+
+      current->contents[name] = new File;
+      current->contents[name]->name = name;
+      current->contents[name]->size = size;
+      current->contents[name]->parent = current;
     }
   }
 
-  return node.size;
+  root->getSize();
+  return root;
 }
 
-void print(FsNode &node, vector<FsNode> &file_system, int depth) {
-  auto tabs = "";
+void print_tree(File *root, int tabs) {
+  for (auto i = 0; i < tabs; i++)
+    cout << '\t';
+  cout << '-' << root->name;
+  if (root->is_dir())
+    cout << " (dir)";
+  else
+    cout << " (file, size=" + to_string(root->size) + ")";
+  cout << endl;
 
-  for (int i = 0; i < depth; i++)
-    tabs += '\t';
-
-  cout << tabs + node.name << endl;
-
-  for (const auto &child : node.children) {
-    print(file_system[child.second], file_system, depth + 1);
+  for (auto &pair : root->contents) {
+    print_tree(pair.second, tabs + 1);
   }
 }
 
-std::vector<string> parse_input(const std::string &file_name) {
-  std::vector<string> ret;
+std::vector<std::string> parse_input(const std::string &file_name) {
+  std::vector<std::string> ret;
 
   std::ifstream fs(file_name);
   std::string line;
@@ -56,88 +160,25 @@ std::vector<string> parse_input(const std::string &file_name) {
   return ret;
 }
 
-int parse_command(const string &line, string &dir_name) {
-  if (line[0] != '$') // not a command
-    return 0;
+int part1(File *root) { return root->sumMaxSize(100000); }
 
-  if (line.find("cd") != 2) // ls command
-    return 1;
+int part2(File *root) {
+  auto unused_space = 70000000 - root->size;
+  auto space_required = 30000000 - unused_space;
 
-  dir_name = line.substr(5);
-  return 2;
+  return root->findDirToDelete(space_required);
 }
-
-int parse_file_data(const string &line, string &dir_name) {
-  auto middle = line.find(" ");
-
-  auto half = line.substr(0, middle);
-  dir_name = line.substr(middle + 1);
-
-  if (half == "dir") // dir listing
-    return 0;
-
-  return stoi(half);
-}
-
-void read_fs(const vector<string> &lines, vector<FsNode> &file_system) {
-  auto &current = file_system[0];
-
-  string file_name;
-
-  for (const auto &l : lines) {
-    file_name = "";
-    auto command = parse_command(l, file_name);
-    if (command) {
-      if (command < 2)
-        continue;
-
-      if (file_name == "/") {
-        current = file_system[0];
-        continue;
-      }
-
-      if (file_name == "..") {
-        if (current.parent)
-          current = *current.parent;
-        continue;
-      }
-
-      if (!current.children.count(file_name)) {
-        file_system.push_back(FsNode(file_name, 0, &current));
-        current.children[file_name] = file_system.size() - 1;
-      }
-
-      current = file_system[current.children[file_name]];
-      continue;
-    }
-
-    auto size = parse_file_data(l, file_name);
-
-    if (!current.children.count(file_name)) {
-      file_system.push_back(FsNode(file_name, size, &current));
-      current.children[file_name] = file_system.size() - 1;
-    }
-  }
-}
-
-int part1(FsNode &root) { return 0; }
-
-int part2(FsNode &root) { return 0; }
 
 int main() {
+  auto lines = parse_input("input.txt");
+  // auto lines = parse_input("test.txt");
 
-  // auto data = parse_input("input.txt");
-  auto data = parse_input("test.txt");
+  auto root = read_file_system(lines);
+  // print_tree(root, 0);
 
-  vector<FsNode> file_system = {FsNode("/", 0, nullptr)};
-  read_fs(data, file_system);
-
-  print(file_system[0], file_system, 0);
-
-  auto r1 = part1(file_system[0]);
+  auto r1 = part1(root);
   std::cout << "Part 1: " << r1 << std::endl;
-
-  auto r2 = part2(file_system[0]);
+  auto r2 = part2(root);
   std::cout << "Part 2: " << r2 << std::endl;
   return 0;
 }
