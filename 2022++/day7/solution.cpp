@@ -29,13 +29,13 @@ struct File {
 
   bool is_dir() { return contents.size() > 0; }
 
-  int sumMaxSize(int max_size) {
+  int sumSizeSmallerThan(int max_size) {
     if (!is_dir())
       return 0;
 
     int sum = 0;
     for (auto &pair : contents) {
-      sum += pair.second->sumMaxSize(max_size);
+      sum += pair.second->sumSizeSmallerThan(max_size);
     }
 
     if (size <= max_size)
@@ -44,14 +44,14 @@ struct File {
     return sum;
   }
 
-  int findDirToDelete(int required_space) {
+  int smallestDirLargerThan(int required_space) {
     int min_size = INT32_MAX;
 
     if (!is_dir())
       return min_size;
 
     for (auto &pair : contents) {
-      auto tmp = pair.second->findDirToDelete(required_space);
+      auto tmp = pair.second->smallestDirLargerThan(required_space);
       if (tmp < min_size)
         min_size = tmp;
     }
@@ -62,8 +62,6 @@ struct File {
     return min_size;
   }
 };
-
-void print_tree(File *root, int tabs);
 
 int is_command(const string &line) {
   if (line.find('$') == string::npos)
@@ -160,13 +158,13 @@ std::vector<std::string> parse_input(const std::string &file_name) {
   return ret;
 }
 
-int part1(File *root) { return root->sumMaxSize(100000); }
+int part1(File *root) { return root->sumSizeSmallerThan(100000); }
 
 int part2(File *root) {
   auto unused_space = 70000000 - root->size;
   auto space_required = 30000000 - unused_space;
 
-  return root->findDirToDelete(space_required);
+  return root->smallestDirLargerThan(space_required);
 }
 
 int main() {
