@@ -1,0 +1,2 @@
+curl.exe https://adventofcode.com/2023/day/1/input --cookie "session=53616c7465645f5ff5b1f77bea9e57b692872a445c74e156f076e79eceee22c888e435661039b45b096a7daed3a4545aaa01cdab3cb45c8b1bfe7759ac1a9354
+" > input.txt
