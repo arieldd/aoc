@@ -17,7 +17,8 @@ std::vector<std::string> parse_input(const std::string &file_name) {
   while (std::getline(fs, line)) {
     ret.push_back(line);
   }
-  return ret;cd 
+  return ret;
+  cd
 }
 int part1() { return 0; }
 int part2() { return 0; }

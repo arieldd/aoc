@@ -1,5 +1,3 @@
-# aoc2022
+# Advent of Code
 
-Solutions to Advent of Code 2022 event
-
-All python scripts
+Solutions to Advent of Code events, 2022 Python and 2019/22/23 on C++.
