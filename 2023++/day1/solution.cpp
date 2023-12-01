@@ -21,67 +21,42 @@ std::vector<std::string> parse_input(const std::string &file_name) {
   return ret;
 }
 
-int calibration_value(const string &line) {
+const map<string, int> numbers = {{"one", 1},   {"two", 2},   {"three", 3},
+                                  {"four", 4},  {"five", 5},  {"six", 6},
+                                  {"seven", 7}, {"eight", 8}, {"nine", 9}};
 
+tuple<int, int> first_last_digit(const string &line, bool letters = false) {
   vector<int> digits{};
-  for (auto &c : line) {
-    if (isdigit(c)) {
-      digits.push_back(c - '0');
+
+  for (int i = 0; i < line.length(); i++) {
+    if (isdigit(line[i])) {
+      digits.push_back(line[i] - '0');
+    } else if (letters) {
+      for (auto l : {3, 4, 5}) { // possible string lengths
+        auto substr = line.substr(i, l);
+        if (auto it = numbers.find(substr); it != numbers.end()) {
+          digits.push_back(it->second);
+        }
+      }
     }
   }
-  // println(line, " ", digits.front() * 10 + digits.back());
-  return digits.front() * 10 + digits.back();
+  return {digits.front(), digits.back()};
 }
 
 int part1(const vector<string> &lines) {
   auto sum = 0;
   for (auto &line : lines) {
-    sum += calibration_value(line);
+    auto pair = first_last_digit(line);
+    sum += get<0>(pair) * 10 + get<1>(pair);
   }
   return sum;
 }
 
 int part2(const vector<string> &lines) {
-  map<string, string> numbers = {{"one", "1"},   {"two", "2"},   {"three", "3"},
-                                 {"four", "4"},  {"five", "5"},  {"six", "6"},
-                                 {"seven", "7"}, {"eight", "8"}, {"nine", "9"}};
-
-  vector<int> lenghts{3, 4, 5};
-
   auto sum = 0;
-  for (const auto &line : lines) {
-    auto str = line;
-
-    for (int i = 0; i < str.length(); i++) {
-      if (isdigit(str[i]))
-        break;
-
-      for (auto l : lenghts) {
-        auto substr = str.substr(i, l);
-        if (numbers.find(substr) != numbers.end()) {
-          str.replace(i, l, numbers[substr]);
-          i = str.length();
-          break;
-        }
-      }
-    }
-
-    for (int i = str.length(); i >= 0; i--) {
-      for (auto l : lenghts) {
-        if (i < l) {
-          i = 0;
-          break;
-        }
-
-        auto substr = str.substr(i - l, l);
-        if (numbers.find(substr) != numbers.end()) {
-          str.replace(i - l, l, numbers[substr]);
-          i = 0;
-          break;
-        }
-      }
-    }
-    sum += calibration_value(str);
+  for (auto &line : lines) {
+    auto pair = first_last_digit(line, true);
+    sum += get<0>(pair) * 10 + get<1>(pair);
   }
   return sum;
 }
