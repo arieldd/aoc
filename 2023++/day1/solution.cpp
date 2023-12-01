@@ -10,12 +10,12 @@
 
 using namespace std;
 
-std::vector<std::string> parse_input(const std::string &file_name) {
-  std::vector<std::string> ret;
+vector<string> parse_input(const string &file_name) {
+  vector<string> ret;
 
-  std::ifstream fs(file_name);
-  std::string line;
-  while (std::getline(fs, line)) {
+  ifstream fs(file_name);
+  string line;
+  while (getline(fs, line)) {
     ret.push_back(line);
   }
   return ret;
