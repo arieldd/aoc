@@ -25,22 +25,16 @@ struct Game {
 vector<Set> parse_sets(const string &plays) {
   vector<Set> sets;
 
-  int semicolon, comma, space;
-  string play_str = plays;
-  while (play_str != "") {
+  auto rounds = split(plays, ';');
+
+  for (auto &round : rounds) {
     Set current{};
+    auto cubes = split(round, ',');
 
-    semicolon = play_str.find(';');
-    auto round = play_str.substr(0, semicolon);
-
-    while (round != "") {
-      comma = round.find(',');
-
-      auto next_cube = round.substr(0, comma);
-
-      space = next_cube.find(' ');
-      auto color = next_cube.substr(space + 1);
-      auto amount = stoi(next_cube.substr(0, space));
+    for (auto &cube : cubes) {
+      auto parts = split(cube, ' ');
+      auto amount = stoi(parts[0]);
+      auto color = parts[1];
 
       if (color == "green") {
         current.green = amount;
@@ -49,19 +43,9 @@ vector<Set> parse_sets(const string &plays) {
       } else {
         current.red = amount;
       }
-
-      if (comma == string::npos)
-        break;
-
-      round = round.substr(comma + 2, string::npos);
     }
 
     sets.push_back(current);
-
-    if (semicolon == string::npos)
-      break;
-
-    play_str = play_str.substr(semicolon + 2, string::npos);
   }
 
   return sets;
@@ -72,12 +56,11 @@ vector<Game> parse_games(const vector<string> game_lines) {
 
   for (auto &game_line : game_lines) {
     Game current{};
-    auto split = game_line.find(':');
-    auto id_side = game_line.substr(0, split);
-    auto play_side = game_line.substr(split + 2, string::npos);
+    auto parts = split(game_line, ':');
+    auto id_side = parts[0];
+    auto play_side = parts[1];
 
-    split = id_side.find(' ');
-    current.id = stoi(id_side.substr(split + 1));
+    current.id = stoi(split(id_side, ' ')[1]);
     current.plays = parse_sets(play_side);
     result.push_back(current);
   }
@@ -86,7 +69,7 @@ vector<Game> parse_games(const vector<string> game_lines) {
 }
 
 vector<Game> parse_input(const string &file_name) {
-  vector<std::string> ret;
+  vector<string> ret;
 
   ifstream fs(file_name);
   string line;
