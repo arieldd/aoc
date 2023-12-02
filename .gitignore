@@ -1,4 +1,5 @@
 *.txt
 *.exe
 *.out
+*.ps1
 .vscode
