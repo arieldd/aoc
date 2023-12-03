@@ -1,6 +1,15 @@
+#include <algorithm>
+#include <fstream>
+#include <functional>
 #include <iostream>
+#include <map>
+#include <numeric>
+#include <set>
 #include <sstream>
+#include <string>
+#include <vector>
 
+#pragma region Print
 template <typename... Args> void print(Args &&...args) {
   (std::cout << ... << args);
 }
@@ -10,7 +19,9 @@ template <typename... Args> void println(Args &&...args) {
 
   std::cout << std::endl;
 }
+#pragma endregion
 
+#pragma region String utils
 const char *ws = " \t\n\r\f\v";
 
 // trim from end of string (right)
@@ -41,3 +52,16 @@ std::vector<std::string> split(const std::string &str, char delim) {
 
   return result;
 }
+#pragma endregion
+
+#pragma region Grid utils
+
+bool is_valid_pos(int i, int j, int r, int c) {
+  return i >= 0 && j >= 0 && i < r && j < c;
+}
+
+// Start from the right clockwise
+const std::vector<int> dy{0, 1, 1, 1, 0, -1, -1, -1},
+    dx{1, 1, 0, -1, -1, -1, 0, 1};
+
+#pragma endregion

@@ -1,13 +1,3 @@
-#include <algorithm>
-#include <fstream>
-#include <functional>
-#include <iostream>
-#include <map>
-#include <numeric>
-#include <set>
-#include <string>
-#include <vector>
-
 #include "utils.h"
 
 using namespace std;
@@ -74,13 +64,6 @@ schematic parse_input(const string &file_name) {
   }
   return parse_map(ret);
 }
-
-bool is_valid_pos(int i, int j, int r, int c) {
-  return i >= 0 && j >= 0 && i < r && j < c;
-}
-
-// Start from the right clockwise
-const vector<int> dy{0, 1, 1, 1, 0, -1, -1, -1}, dx{1, 1, 0, -1, -1, -1, 0, 1};
 
 int part1(const schematic &map) {
   int total = 0;
