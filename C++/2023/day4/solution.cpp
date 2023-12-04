@@ -75,10 +75,8 @@ int part2(const vector<Card> &cards) {
       }
     }
 
-    for (auto j = 0; j < total_cards[card.id]; j++) {
-      for (auto i = 1; i <= cards_won; i++) {
-        total_cards[card.id + i]++;
-      }
+    for (auto i = 1; i <= cards_won; i++) {
+      total_cards[card.id + i] += total_cards[card.id];
     }
   }
 
