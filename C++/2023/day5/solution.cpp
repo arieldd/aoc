@@ -1,7 +1,5 @@
 #include "utils.h"
 
-#include <big_num>
-
 using namespace std;
 using number = uint64_t;
 
@@ -9,7 +7,6 @@ struct Range {
   number dest;
   number source;
   number length;
-  bool modified = false;
 
   number end() const { return source + length - 1; }
 
@@ -17,11 +14,12 @@ struct Range {
     vector<Range> result;
     if (source < other.source) {
       Range first = {0, source, other.source - source};
-      result.push_back(first);
 
       Range main = {0, other.source, min(other.length, length - first.length)};
       main.transform(other);
+
       result.push_back(main);
+      result.push_back(first);
 
       auto used = first.length + main.length;
       if (used < length) {
@@ -158,21 +156,27 @@ number part2(const Almanac &instr) {
   int index = 0;
   for (auto &map : instr.maps) {
     vector<Range> new_ranges;
-    for (auto &src : src_ranges) {
+    while (src_ranges.size()) {
+      auto src = src_ranges.back();
+      src_ranges.pop_back();
+
+      bool match = false;
+      ;
+
       for (auto &entry : map) {
         if (src.disjoint(entry))
           continue;
 
         auto split = src.split_and_transform(entry);
-        for (auto &part : split) {
-          new_ranges.push_back(part);
+        new_ranges.push_back(split[0]);
+
+        for (auto i = 1; i < split.size(); i++) {
+          src_ranges.push_back(split[i]);
         }
 
-        src.modified = true;
+        match = true;
       }
-    }
-    for (auto &src : src_ranges) {
-      if (!src.modified)
+      if (!match)
         new_ranges.push_back(src);
     }
 

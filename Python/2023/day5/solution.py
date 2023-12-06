@@ -101,11 +101,7 @@ def part2(data):
                 nr.append([s, l])
 
         seeds += nr
-        # print(seeds)
-        # print(sum([pair[1] for pair in seeds]))
-
-    print("----")
-    # print(seeds)
+        
     return min(seeds, key=lambda x: x[0])[0]
 
 
