@@ -78,13 +78,10 @@ int part2(const Race &big_race) { return beat_race(big_race); }
 int main(int argc, char *argv[]) {
   auto lines = parse_input(argv[1]);
   auto races = read_races(lines);
+  auto big_race = read_big_race(lines);
 
   auto r1 = part1(races);
   println("Part 1: ", r1);
-
-  auto big_race = read_big_race(lines);
-
-  println(big_race.duration, " ", big_race.record);
 
   auto r2 = part2(big_race);
   println("Part 2: ", r2);
