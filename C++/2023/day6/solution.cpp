@@ -21,6 +21,16 @@ uint64_t beat_race(const Race &r) {
   return ways_to_win;
 }
 
+uint64_t beat_race_elegantly(const Race &r) {
+  double b = r.duration, c = r.record;
+  auto D = sqrt(b * b - 4 * c);
+
+  auto s1 = (-b + D) / 2, //
+      s2 = (-b - D) / 2;
+
+  return s1 - s2 + 1;
+}
+
 vector<Race> read_races(const vector<string> &lines) {
   vector<Race> result;
 
@@ -73,7 +83,7 @@ int part1(const vector<Race> &races) {
   return total;
 }
 
-int part2(const Race &big_race) { return beat_race(big_race); }
+int part2(const Race &big_race) { return beat_race_elegantly(big_race); }
 
 int main(int argc, char *argv[]) {
   auto lines = parse_input(argv[1]);
