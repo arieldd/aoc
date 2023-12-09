@@ -17,7 +17,7 @@ readings_t read_sequences(const vector<string> &lines) {
   return result;
 }
 
-int64_t predict_next(const vector<int64_t> &seq, bool front = false) {
+tuple<int64_t, int64_t> seq_predictions(const vector<int64_t> &seq) {
   vector<int64_t> current = seq,         //
       front_entries = {current.front()}, //
       back_entries = {current.back()};
@@ -30,20 +30,30 @@ int64_t predict_next(const vector<int64_t> &seq, bool front = false) {
     }
 
     if (all_of(next.begin(), next.end(), [](int val) { return val == 0; })) {
-      if (front) {
-        return accumulate(front_entries.rbegin(), front_entries.rend(), 0,
-                          [](int sum, int elem) { return elem - sum; });
-      }
+      int64_t front =
+          accumulate(front_entries.rbegin(), front_entries.rend(), 0,
+                     [](int sum, int elem) { return elem - sum; });
+      int64_t back = accumulate(back_entries.begin(), back_entries.end(), 0);
 
-      return accumulate(back_entries.begin(), back_entries.end(), 0);
+      return {front, back};
     }
 
     front_entries.push_back(next.front());
     back_entries.push_back(next.back());
     current = next;
   }
+}
 
-  return 0;
+tuple<int64_t, int64_t> predict_history(const readings_t &seqs) {
+  int64_t front_sum = 0, back_sum = 0;
+
+  for (auto &seq : seqs) {
+    auto predictions = seq_predictions(seq);
+    front_sum += get<0>(predictions);
+    back_sum += get<1>(predictions);
+  }
+
+  return {front_sum, back_sum};
 }
 
 vector<string> parse_input(const string &file_name) {
@@ -57,34 +67,16 @@ vector<string> parse_input(const string &file_name) {
   return ret;
 }
 
-int part1(const readings_t &seqs) {
-  int total = 0;
-
-  for (auto &seq : seqs) {
-
-    total += predict_next(seq);
-  }
-  return total;
-}
-
-int part2(const readings_t &seqs) {
-  int total = 0;
-
-  for (auto &seq : seqs) {
-
-    total += predict_next(seq, true);
-  }
-  return total;
-}
-
 int main(int argc, char *argv[]) {
   auto lines = parse_input(argv[1]);
   auto seqs = read_sequences(lines);
 
-  auto r1 = part1(seqs);
+  auto results = predict_history(seqs);
+
+  auto r1 = get<1>(results);
   println("Part 1: ", r1);
 
-  auto r2 = part2(seqs);
+  auto r2 = get<0>(results);
   println("Part 2: ", r2);
 
   return 0;
