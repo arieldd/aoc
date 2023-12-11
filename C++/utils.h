@@ -3,6 +3,7 @@
 #include <functional>
 #include <iostream>
 #include <map>
+#include <deque>
 #include <numeric>
 #include <set>
 #include <sstream>
