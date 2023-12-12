@@ -1,14 +1,15 @@
 #include <algorithm>
+#include <deque>
 #include <fstream>
 #include <functional>
 #include <iostream>
 #include <map>
-#include <deque>
 #include <numeric>
 #include <set>
 #include <sstream>
 #include <string>
 #include <vector>
+
 
 #pragma region Print
 template <typename... Args> void print(Args &&...args) {
@@ -68,8 +69,8 @@ const std::vector<int> dy{0, 1, 1, 1, 0, -1, -1, -1},
 #pragma endregion
 
 #pragma region Math
-int ipow(int base, int exp) {
-  int result = 1;
+int64_t ipow(int base, int exp) {
+  int64_t result = 1;
   for (;;) {
     if (exp & 1)
       result *= base;

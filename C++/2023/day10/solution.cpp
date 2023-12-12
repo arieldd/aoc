@@ -136,42 +136,59 @@ void print_loop(const vector<Node> &loop, int n) {
   }
 }
 
-vector<vector<char>> clean_junk(int n, const vector<Node> &loop) {
-  vector<vector<char>> result;
+vector<vector<Node>> clean_junk(int n, const vector<Node> &loop) {
+  vector<vector<Node>> result;
 
   for (auto i = 0; i < n; i++) {
-    vector<char> row;
+    vector<Node> row;
     for (int j = 0; j < n; j++)
-      row.push_back(0);
+      row.push_back({i, j, '.'});
     result.push_back(row);
   }
 
   for (auto &node : loop) {
-    result[node.r][node.c] = node.symbol;
+    result[node.r][node.c].symbol = node.symbol;
   }
 
   return result;
 }
 
-void can_escape(int r, int c, vector<vector<char>> pipes) {
-  if (pipes[r][c] > 0)
-    return;
+bool is_pipe(char symbol) {
 
-  auto n = pipes.size();
-  if (r == 0 || c == 0 || r == n - 1 || c == n - 1)
-    return;
+  return symbol == 'F' || symbol == 'L' || symbol == 'J' || symbol == '7' ||
+         symbol == '|' || symbol == '-' || symbol == 'S';
+}
+
+bool try_escape(int r, int c, vector<vector<Node>> &schematics,
+                set<Node> visited) {
+
+  visited.insert(schematics[r][c]);
+
+  if (is_pipe(schematics[r][c].symbol))
+    return false;
+
+  if (schematics[r][c].symbol == '0')
+    return true;
+
+  auto n = schematics.size();
+  if (r == 0 || c == 0 || r == n - 1 || c == n - 1) {
+    schematics[r][c].symbol = '0';
+    return true;
+  }
 
   for (auto k = 0; k < 8; k += 2) {
-    int i = r + dy[k], j = c + dx[k];
+    auto i = r + dy[k], j = c + dx[k];
 
-    if (is_valid_pos(i, j, n, n)) {
-      can_escape(i, j, pipes);
-      if (pipes[i][j] == 1) {
-        pipes[r][c] = 1;
-        return;
+    if (is_valid_pos(i, j, n, n) && visited.find({i, j}) == visited.end()) {
+
+      if (try_escape(i, j, schematics, visited)) {
+        schematics[r][c].symbol = '0';
+        return true;
       }
     }
   }
+
+  return false;
 }
 
 vector<string> parse_input(const string &file_name) {
@@ -228,25 +245,50 @@ int part1(Graph &graph, vector<Node> &loop) {
   return max;
 }
 
-int part2(vector<vector<char>> pipes, const vector<Node> &loop) {
+int part2(vector<vector<Node>> &pipes) {
 
-  auto n = pipes.size();
-  for (auto i = 1; i < n - 1; i++) {
-    for (int j = 1; j < n - 1; j++)
-      can_escape(i, j, pipes);
-  }
+  int total_in = 0;
 
-  for (auto i = 1; i < n - 1; i++) {
-    for (int j = 1; j < n - 1; j++) {
-      auto value = pipes[i][j];
-      if (value < 2)
-        value += '0';
-      print(value, " ");
+  map<char, char> closing{{'|', '|'}, {'F', '7'}, {'L', 'J'}, {'S', 'J'}};
+
+  for (auto &row : pipes) {
+    int up = 0, down = 0;
+
+    for (auto &elem : row) {
+      if (elem.symbol == '-')
+        continue;
+
+      if (elem.symbol == '|') {
+        if (up)
+          up--;
+        else
+          up++;
+
+        if (down)
+          down--;
+        else
+          down++;
+      }
+      if (elem.symbol == 'F' || elem.symbol == '7') {
+        if (down)
+          down--;
+        else
+          down++;
+      }
+
+      if (elem.symbol == 'L' || elem.symbol == 'J' || elem.symbol == 'S') {
+        if (up)
+          up--;
+        else
+          up++;
+      }
+
+      if (elem.symbol == '.' && (up || down))
+        total_in++;
     }
-    println();
   }
 
-  return 0;
+  return total_in;
 }
 
 int main(int argc, char *argv[]) {
@@ -259,7 +301,7 @@ int main(int argc, char *argv[]) {
 
   auto pipes = clean_junk(lines.size(), loop);
 
-  auto r2 = part2(pipes, loop);
+  auto r2 = part2(pipes);
   println("Part 2: ", r2);
 
   return 0;
