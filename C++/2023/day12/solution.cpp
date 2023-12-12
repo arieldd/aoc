@@ -75,12 +75,21 @@ bool check_row(const Row &row) {
   return true;
 }
 
-void find_ways(const Row &row, int index, int64_t &total) {
+void find_ways(const Row &row, int index, int group_size, vector<int> groups,
+               int64_t &total) {
 
   if (index >= row.springs.size()) {
-    if (check_row(row)) {
+    if (group_size)
+      groups.push_back(group_size);
+
+    if (groups == row.diagnostic) {
       total += 1;
     }
+    return;
+  }
+
+  if (!groups.empty() && !equal(groups.begin(), groups.end(),
+                                row.diagnostic.begin())) { // Wrong path
     return;
   }
 
@@ -88,12 +97,23 @@ void find_ways(const Row &row, int index, int64_t &total) {
     auto current = row;
 
     current.springs[index] = '#';
-    find_ways(current, index + 1, total);
+    find_ways(current, index + 1, group_size + 1, groups, total);
 
     current.springs[index] = '.';
-    find_ways(current, index + 1, total);
-  } else
-    find_ways(row, index + 1, total);
+    if (group_size)
+      groups.push_back(group_size);
+    find_ways(current, index + 1, 0, groups, total);
+
+  } else if (row.springs[index] == '#') {
+    find_ways(row, index + 1, group_size + 1, groups, total);
+
+  } else {
+
+    if (group_size)
+      groups.push_back(group_size);
+
+    find_ways(row, index + 1, 0, groups, total);
+  }
 }
 
 int64_t ways_with_break(const Row &r, bool front) {
@@ -107,7 +127,7 @@ int64_t ways_with_break(const Row &r, bool front) {
   }
 
   int64_t ways = 0;
-  find_ways(expanded, 0, ways);
+  find_ways(expanded, 0, 0, {}, ways);
   return ways;
 }
 
@@ -126,7 +146,8 @@ int64_t ways_for_breaks(const Row &r, int breaks) {
   }
 
   int64_t ways = 0;
-  find_ways(expanded, 0, ways);
+  find_ways(expanded, 0, 0, {}, ways);
+
   return ways;
 }
 
@@ -145,7 +166,7 @@ int64_t part1(vector<Row> &rows) {
   int64_t total_ways = 0;
   for (auto &row : rows) {
     int64_t ways = 0;
-    find_ways(row, 0, ways);
+    find_ways(row, 0, 0, {}, ways);
     row.ways = ways;
     total_ways += row.ways;
   }
@@ -175,7 +196,7 @@ int64_t part2(vector<Row> &rows) {
 
     new_ways += f_ways + b_ways + c_ways;
 
-    println(f_ways, " ", b_ways, " : ", new_ways);
+    // println(f_ways, " ", b_ways, " : ", new_ways);
 
     total_ways += new_ways;
   }
