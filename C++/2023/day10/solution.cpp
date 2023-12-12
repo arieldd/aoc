@@ -153,44 +153,6 @@ vector<vector<Node>> clean_junk(int n, const vector<Node> &loop) {
   return result;
 }
 
-bool is_pipe(char symbol) {
-
-  return symbol == 'F' || symbol == 'L' || symbol == 'J' || symbol == '7' ||
-         symbol == '|' || symbol == '-' || symbol == 'S';
-}
-
-bool try_escape(int r, int c, vector<vector<Node>> &schematics,
-                set<Node> visited) {
-
-  visited.insert(schematics[r][c]);
-
-  if (is_pipe(schematics[r][c].symbol))
-    return false;
-
-  if (schematics[r][c].symbol == '0')
-    return true;
-
-  auto n = schematics.size();
-  if (r == 0 || c == 0 || r == n - 1 || c == n - 1) {
-    schematics[r][c].symbol = '0';
-    return true;
-  }
-
-  for (auto k = 0; k < 8; k += 2) {
-    auto i = r + dy[k], j = c + dx[k];
-
-    if (is_valid_pos(i, j, n, n) && visited.find({i, j}) == visited.end()) {
-
-      if (try_escape(i, j, schematics, visited)) {
-        schematics[r][c].symbol = '0';
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
-
 vector<string> parse_input(const string &file_name) {
   vector<string> ret;
 
