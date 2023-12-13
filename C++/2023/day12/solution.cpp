@@ -1,4 +1,5 @@
 #include "utils.h"
+#include <execution>
 
 using namespace std;
 
@@ -116,30 +117,15 @@ void find_ways(const Row &row, int index, int group_size, vector<int> groups,
   }
 }
 
-int64_t ways_with_break(const Row &r, bool front) {
-
-  auto expanded = r;
-
-  if (front) {
-    expanded.springs.insert(expanded.springs.begin(), '#');
-  } else {
-    expanded.springs.push_back('#');
-  }
-
-  int64_t ways = 0;
-  find_ways(expanded, 0, 0, {}, ways);
-  return ways;
-}
-
-int64_t ways_for_breaks(const Row &r, int breaks) {
+int64_t ways_for_extended(const Row &r, int extensions, char value) {
 
   auto expanded = r;
 
   auto s = r.springs;
   auto d = r.diagnostic;
 
-  for (int i = 0; i < breaks; i++) {
-    expanded.springs.push_back('#');
+  for (int i = 0; i < extensions; i++) {
+    expanded.springs.push_back(value);
     expanded.springs.insert(expanded.springs.end(), s.begin(), s.end());
 
     expanded.diagnostic.insert(expanded.diagnostic.end(), d.begin(), d.end());
@@ -175,31 +161,20 @@ int64_t part1(vector<Row> &rows) {
 
 int64_t part2(vector<Row> &rows) {
   int64_t total_ways = 0;
-  for (auto &row : rows) {
+  for_each(execution::par, rows.begin(), rows.end(), [](auto &&row) {
+    auto w0 = row.ways, w1 = ways_for_extended(row, 1, '#'),
+         w2 = ways_for_extended(row, 2, '#'),
+         w3 = ways_for_extended(row, 3, '#'),
+         w4 = ways_for_extended(row, 4, '#');
 
-    auto w0 = row.ways,                   //
-        wf = ways_with_break(row, true),  //
-        wb = ways_with_break(row, false), //
-        p2 = w0 * w0, p3 = p2 * w0, p4 = p3 * w0, p5 = p4 * w0;
+    row.ways = ipow(w0, 5) + 4 * (w1 * ipow(w0, 3)) + 3 * (w2 * w0 * w0) +
+               3 * w1 * w1 * w0 + 2 * w3 * w0 + 2 * w2 * w1 + w4;
+    println("done");
+  });
 
-    auto new_ways = p5;
+  for (auto &row : rows)
+    total_ways += row.ways;
 
-    int64_t f_ways = 4 * p4 * wf + 6 * ipow(wf, 2) * p3 + 4 * p2 * ipow(wf, 3) +
-                     w0 * ipow(wf, 4);
-
-    int64_t b_ways = b_ways = 4 * p4 * wb + 6 * ipow(wb, 2) * p3 +
-                              4 * p2 * ipow(wb, 3) + w0 * ipow(wb, 4);
-
-    int64_t c_ways =
-        6 * wb * wf * p3 + 4 * p2 * (wb * wb * wf + wf * wf * wb) +
-        w0 * (ipow(wb, 3) * wf + ipow(wb, 2) * ipow(wf, 2) + wb * ipow(wf, 3));
-
-    new_ways += f_ways + b_ways + c_ways;
-
-    // println(f_ways, " ", b_ways, " : ", new_ways);
-
-    total_ways += new_ways;
-  }
   return total_ways;
 }
 
