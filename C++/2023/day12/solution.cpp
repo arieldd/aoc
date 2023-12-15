@@ -1,18 +1,29 @@
 #include "utils.h"
-#include <execution>
+#include <unordered_map>
 
 using namespace std;
 
 struct Record {
   vector<char> springs;
-  vector<int> diagnostic;
-  int64_t ways;
+  vector<int> groups;
 
-  bool operator<(const Record &other) const {
-    return springs < other.springs &&
-           (!(other.springs < springs) && diagnostic < other.diagnostic);
+  bool operator==(const Record &other) const {
+    return springs == other.springs && groups == other.groups;
   }
 };
+
+template <> struct std::hash<Record> {
+  size_t operator()(const Record &r) const {
+    string ss;
+    for (auto &c : r.springs) {
+      ss += c;
+    }
+
+    return hash<string>{}(ss);
+  }
+};
+
+using map_t = unordered_map<Record, int64_t>;
 
 vector<Record> read_springs(const vector<string> &lines) {
   vector<Record> result;
@@ -27,7 +38,7 @@ vector<Record> read_springs(const vector<string> &lines) {
     }
 
     for (auto &n : numbers)
-      current.diagnostic.push_back(stoi(n));
+      current.groups.push_back(stoi(n));
 
     result.push_back(current);
   }
@@ -35,13 +46,16 @@ vector<Record> read_springs(const vector<string> &lines) {
   return result;
 }
 
-void print_record(const Record row) {
+void print_record(const Record row, tuple<int, int, int> mark) {
 
   for (auto s : row.springs)
     print(s);
-  print(':');
-  for (auto &d : row.diagnostic)
+  print(" [");
+  for (auto &d : row.groups)
     print(d, " ");
+
+  print("] s:", get<0>(mark), " g:", get<1>(mark), " l:", get<2>(mark));
+
   println();
 }
 
@@ -52,14 +66,14 @@ void find_ways(const Record &row, int index, int group_size, vector<int> groups,
     if (group_size)
       groups.push_back(group_size);
 
-    if (groups == row.diagnostic) {
+    if (groups == row.groups) {
       total += 1;
     }
     return;
   }
 
   if (!groups.empty() && !equal(groups.begin(), groups.end(),
-                                row.diagnostic.begin())) { // Wrong path
+                                row.groups.begin())) { // Wrong path
     return;
   }
 
@@ -86,75 +100,87 @@ void find_ways(const Record &row, int index, int group_size, vector<int> groups,
   }
 }
 
-void find_ways_memoise(Record &row, int sindex, int gindex, int group_size,
-                       set<Record> cache) {
-
-  print_record(row);
-  println(sindex, " ", gindex, " ", group_size);
-  row.ways = 0;
+int64_t find_ways_memoise(const Record &row, int sindex, int gindex,
+                          int group_size, map_t &cache) {
 
   if (auto it = cache.find(row); it != cache.end()) {
-    row.ways = it->ways;
-    return;
+    return cache.at(row);
   }
 
-  if (sindex >= row.springs.size()) {
-    row.ways = 1;
-    cache.insert(row);
-    return;
+  int64_t result = 0;
+
+  if (row.springs.empty() || sindex >= row.springs.size()) {
+    result = 1;
+
+    if (group_size) {
+      if (row.groups.empty() || row.groups.size() > 1 ||
+          row.groups[gindex] != group_size) {
+        result = 0;
+      }
+    } else if (!row.groups.empty())
+      result = 0;
+
+    cache[row] = result;
+
+    return result;
   }
 
-  if (gindex >= row.diagnostic.size() ||
-      group_size > row.diagnostic[gindex]) { // Wrong path
-    row.ways = 0;
-    cache.insert(row);
-    return;
+  if (group_size &&
+      (gindex >= row.groups.size() || row.groups[gindex] < group_size)) {
+    cache[row] = 0;
+    return 0;
   }
 
-  auto next = row;
   if (row.springs[sindex] == '?') {
+    auto next = row;
 
     next.springs[sindex] = '#';
-    find_ways_memoise(next, sindex + 1, gindex, group_size + 1, cache);
-    row.ways = next.ways;
+    result += find_ways_memoise(next, sindex, gindex, group_size, cache);
 
-    next.springs[0] = '.';
-    next.springs =
-        vector<char>(row.springs.begin() + sindex + 1, row.springs.end());
-    find_ways_memoise(next, 0, gindex + 1, 0, cache);
-    row.ways += next.ways;
+    next.springs[sindex] = '.';
+    result += find_ways_memoise(next, sindex, gindex, group_size, cache);
 
   } else if (row.springs[sindex] == '#') {
-    find_ways_memoise(row, sindex + 1, gindex, group_size + 1, cache);
+    result = find_ways_memoise(row, sindex + 1, gindex, group_size + 1, cache);
 
   } else {
+    if (group_size) {
+      if (group_size != row.groups[gindex]) {
+        cache[row] = 0;
+        return 0;
+      }
+      gindex++;
+    }
+
+    Record next;
     next.springs =
         vector<char>(row.springs.begin() + sindex + 1, row.springs.end());
-    find_ways_memoise(next, 0, gindex + 1, 0, cache);
-    row.ways += next.ways;
+
+    next.groups = vector<int>(row.groups.begin() + gindex, row.groups.end());
+
+    result = find_ways_memoise(next, 0, 0, 0, cache);
   }
 
-  cache.insert(row);
-  println(row.ways);
-  return;
+  cache[row] = result;
+  return result;
 }
 
-void find_ways_for_extended(Record &r, int extensions, char value) {
+int64_t find_ways_for_extended(Record &r, int extensions, char value) {
 
   auto expanded = r;
 
   auto s = r.springs;
-  auto d = r.diagnostic;
+  auto d = r.groups;
 
   for (int i = 0; i < extensions; i++) {
     expanded.springs.push_back(value);
     expanded.springs.insert(expanded.springs.end(), s.begin(), s.end());
 
-    expanded.diagnostic.insert(expanded.diagnostic.end(), d.begin(), d.end());
+    expanded.groups.insert(expanded.groups.end(), d.begin(), d.end());
   }
 
-  int64_t ways = 0;
-  find_ways_memoise(expanded, 0, 0, 0, {});
+  map_t cache;
+  return find_ways_memoise(expanded, 0, 0, 0, cache);
 }
 
 vector<string> parse_input(const string &file_name) {
@@ -169,26 +195,30 @@ vector<string> parse_input(const string &file_name) {
 }
 
 int64_t part1(vector<Record> &rows) {
-  int64_t total_ways = 0;
+  vector<int64_t> total_ways;
+
   for (auto &row : rows) {
-    find_ways_memoise(row, 0, 0, 0, {});
-    total_ways += row.ways;
+    try {
+      map_t cache;
+      auto ways = find_ways_memoise(row, 0, 0, 0, cache);
+      total_ways.push_back(ways);
+    } catch (exception e) {
+      println(e.what());
+    }
   }
-  return total_ways;
+
+  return accumulate(total_ways.begin(), total_ways.end(), (int64_t)0);
 }
 
 int64_t part2(vector<Record> &rows) {
-  int64_t total_ways = 0;
-  for_each(execution::par, rows.begin(), rows.end(), [](auto &&row) {
-    find_ways_for_extended(row, 4, '?');
+  vector<int64_t> total_ways(rows.size());
 
-    println(row.ways);
-  });
+  for (auto &row : rows) {
+    int64_t ways = find_ways_for_extended(row, 4, '?');
+    total_ways.push_back(ways);
+  }
 
-  for (auto &row : rows)
-    total_ways += row.ways;
-
-  return total_ways;
+  return accumulate(total_ways.begin(), total_ways.end(), (int64_t)0);
 }
 
 int main(int argc, char *argv[]) {
@@ -199,8 +229,8 @@ int main(int argc, char *argv[]) {
   auto r1 = part1(rows);
   println("Part 1: ", r1);
 
-  // auto r2 = part2(rows);
-  // println("Part 2: ", r2);
+  auto r2 = part2(rows);
+  println("Part 2: ", r2);
 
   return 0;
 }
