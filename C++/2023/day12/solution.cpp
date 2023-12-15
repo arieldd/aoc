@@ -103,7 +103,7 @@ void find_ways(const Record &row, int index, int group_size, vector<int> groups,
 int64_t find_ways_memoise(const Record &row, int sindex, int gindex,
                           int group_size, map_t &cache) {
 
-  if (auto it = cache.find(row); it != cache.end()) {
+  if (cache.find(row) != cache.end()) {
     return cache.at(row);
   }
 
