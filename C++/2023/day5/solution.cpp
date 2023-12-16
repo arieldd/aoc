@@ -161,7 +161,6 @@ number part2(const Almanac &instr) {
       src_ranges.pop_back();
 
       bool match = false;
-      ;
 
       for (auto &entry : map) {
         if (src.disjoint(entry))

@@ -9,7 +9,7 @@ struct Part {
 };
 
 const bool operator<(const Part &lhs, const Part &rhs) {
-  return (lhs.i < rhs.i) || (!(rhs.i > lhs.i) && lhs.j < rhs.j);
+  return (lhs.i < rhs.i) || (!(rhs.i < lhs.i) && lhs.j < rhs.j);
 }
 
 using schematic = vector<vector<Part>>;
