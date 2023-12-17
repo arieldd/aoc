@@ -121,17 +121,6 @@ void print_almanac(const Almanac &instr) {
   }
 }
 
-vector<string> parse_input(const string &file_name) {
-  vector<string> ret;
-
-  ifstream fs(file_name);
-  string line;
-  while (getline(fs, line)) {
-    ret.push_back(line);
-  }
-  return ret;
-}
-
 number part1(const Almanac &instr) {
   vector<number> values = instr.seeds;
 

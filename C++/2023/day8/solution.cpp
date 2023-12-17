@@ -78,17 +78,6 @@ vector<uint64_t> start_and_cycle(const string &node, const Network &network) {
   return {start, steps - start};
 }
 
-vector<string> parse_input(const string &file_name) {
-  vector<string> ret;
-
-  ifstream fs(file_name);
-  string line;
-  while (getline(fs, line)) {
-    ret.push_back(line);
-  }
-  return ret;
-}
-
 int part1(const Network &network, string start, string end) {
   int steps = 0, index = 0;
 

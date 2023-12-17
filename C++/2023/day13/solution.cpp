@@ -174,17 +174,6 @@ Reflection find_reflection_with_smudge(const Pattern &p) {
   return result;
 }
 
-vector<string> parse_input(const string &file_name) {
-  vector<string> ret;
-
-  ifstream fs(file_name);
-  string line;
-  while (getline(fs, line)) {
-    ret.push_back(line);
-  }
-  return ret;
-}
-
 int part1(vector<Pattern> &patterns) {
 
   int rows = 0, columns = 0;

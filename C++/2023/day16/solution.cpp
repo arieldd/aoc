@@ -97,17 +97,6 @@ int total_energy(const grid_t &tiles) {
   return energized;
 }
 
-vector<string> parse_input(const string &file_name) {
-  vector<string> ret;
-
-  ifstream fs(file_name);
-  string line;
-  while (getline(fs, line)) {
-    ret.push_back(line);
-  }
-  return ret;
-}
-
 int part1(const grid_t &tiles) {
 
   auto exploring = tiles;

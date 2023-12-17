@@ -68,18 +68,6 @@ vector<Game> parse_games(const vector<string> game_lines) {
   return result;
 }
 
-vector<Game> parse_input(const string &file_name) {
-  vector<string> ret;
-
-  ifstream fs(file_name);
-  string line;
-  while (getline(fs, line)) {
-    ret.push_back(line);
-  }
-
-  return parse_games(ret);
-}
-
 void print_games(const vector<Game> &games) {
   for (auto &game : games) {
     print("id: ", game.id, " ");
@@ -136,7 +124,9 @@ int part2(const vector<Game> &games) {
 }
 
 int main() {
-  auto games = parse_input("input.txt");
+  auto lines = parse_input("input.txt");
+
+  auto games = parse_games(lines);
   // auto games = parse_input("test.txt");
   auto r1 = part1(games);
   println("Part 1: ", r1);

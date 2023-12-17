@@ -63,17 +63,6 @@ Race read_big_race(const vector<string> &lines) {
   return Race{time, record};
 }
 
-vector<string> parse_input(const string &file_name) {
-  vector<string> ret;
-
-  ifstream fs(file_name);
-  string line;
-  while (getline(fs, line)) {
-    ret.push_back(line);
-  }
-  return ret;
-}
-
 int part1(const vector<Race> &races) {
   int total = 1;
   for (auto &r : races) {

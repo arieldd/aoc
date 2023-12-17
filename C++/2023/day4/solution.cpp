@@ -37,17 +37,6 @@ vector<Card> parse_cards(const vector<string> &lines) {
   return result;
 }
 
-vector<Card> parse_input(const string &file_name) {
-  vector<string> ret;
-
-  ifstream fs(file_name);
-  string line;
-  while (getline(fs, line)) {
-    ret.push_back(line);
-  }
-  return parse_cards(ret);
-}
-
 int part1(const vector<Card> &cards) {
   int total_points = 0;
   for (auto &card : cards) {
@@ -85,7 +74,9 @@ int part2(const vector<Card> &cards) {
 }
 
 int main(int argc, char *argv[]) {
-  auto cards = parse_input(argv[1]);
+
+  auto lines = parse_input(argv[1]);
+  auto cards = parse_cards(lines);
 
   auto r1 = part1(cards);
   println("Part 1: ", r1);

@@ -56,17 +56,6 @@ tuple<int64_t, int64_t> predict_history(const readings_t &seqs) {
   return {front_sum, back_sum};
 }
 
-vector<string> parse_input(const string &file_name) {
-  vector<string> ret;
-
-  ifstream fs(file_name);
-  string line;
-  while (getline(fs, line)) {
-    ret.push_back(line);
-  }
-  return ret;
-}
-
 int main(int argc, char *argv[]) {
   auto lines = parse_input(argv[1]);
   auto seqs = read_sequences(lines);

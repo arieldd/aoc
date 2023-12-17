@@ -98,17 +98,6 @@ void print_hands(const vector<Hand> &hands) {
   }
 }
 
-vector<string> parse_input(const string &file_name) {
-  vector<string> ret;
-
-  ifstream fs(file_name);
-  string line;
-  while (getline(fs, line)) {
-    ret.push_back(line);
-  }
-  return ret;
-}
-
 int part1(const vector<Hand> &hands) {
   auto sorted = hands;
   sort(sorted.begin(), sorted.end());

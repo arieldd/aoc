@@ -183,17 +183,6 @@ int64_t find_ways_for_extended(Record &r, int extensions, char value) {
   return find_ways_memoise(expanded, 0, 0, 0, cache);
 }
 
-vector<string> parse_input(const string &file_name) {
-  vector<string> ret;
-
-  ifstream fs(file_name);
-  string line;
-  while (getline(fs, line)) {
-    ret.push_back(line);
-  }
-  return ret;
-}
-
 int64_t part1(vector<Record> &rows) {
   vector<int64_t> total_ways;
 

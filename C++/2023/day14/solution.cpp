@@ -117,17 +117,6 @@ void print_platform(const platform_t &p) {
   println();
 }
 
-vector<string> parse_input(const string &file_name) {
-  vector<string> ret;
-
-  ifstream fs(file_name);
-  string line;
-  while (getline(fs, line)) {
-    ret.push_back(line);
-  }
-  return ret;
-}
-
 int part1(const platform_t &rocks) {
 
   auto p = tilt(rocks, 0);

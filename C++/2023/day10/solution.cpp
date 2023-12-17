@@ -153,17 +153,6 @@ vector<vector<Node>> clean_junk(int n, const vector<Node> &loop) {
   return result;
 }
 
-vector<string> parse_input(const string &file_name) {
-  vector<string> ret;
-
-  ifstream fs(file_name);
-  string line;
-  while (getline(fs, line)) {
-    ret.push_back(line);
-  }
-  return ret;
-}
-
 int part1(Graph &graph, vector<Node> &loop) {
 
   map<Node, vector<int>> visited;

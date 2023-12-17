@@ -87,17 +87,6 @@ vector<galaxy_t> find_galaxies(const image_t &universe) {
   return result;
 }
 
-vector<string> parse_input(const string &file_name) {
-  vector<string> ret;
-
-  ifstream fs(file_name);
-  string line;
-  while (getline(fs, line)) {
-    ret.push_back(line);
-  }
-  return ret;
-}
-
 int64_t part2(const universe_t &universe, int64_t expansion) {
   auto galaxies = find_galaxies(universe.reading);
 

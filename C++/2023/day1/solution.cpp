@@ -2,17 +2,6 @@
 
 using namespace std;
 
-vector<string> parse_input(const string &file_name) {
-  vector<string> ret;
-
-  ifstream fs(file_name);
-  string line;
-  while (getline(fs, line)) {
-    ret.push_back(line);
-  }
-  return ret;
-}
-
 const map<string, int> numbers = {{"one", 1},   {"two", 2},   {"three", 3},
                                   {"four", 4},  {"five", 5},  {"six", 6},
                                   {"seven", 7}, {"eight", 8}, {"nine", 9}};

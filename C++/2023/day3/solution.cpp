@@ -54,17 +54,6 @@ schematic parse_map(const vector<string> &lines) {
   return result;
 }
 
-schematic parse_input(const string &file_name) {
-  vector<string> ret;
-
-  ifstream fs(file_name);
-  string line;
-  while (getline(fs, line)) {
-    ret.push_back(line);
-  }
-  return parse_map(ret);
-}
-
 int part1(const schematic &map) {
   int total = 0;
 
@@ -133,9 +122,9 @@ int part2(const schematic &map) {
   return total_ratios;
 }
 
-int main() {
-  auto map = parse_input("input.txt");
-  // auto map = parse_input("test.txt");
+int main(int argc, char *argv[]) {
+  auto lines = parse_input(argv[1]);
+  auto map = parse_map(lines);
 
   auto r1 = part1(map);
   println("Part 1: ", r1);
