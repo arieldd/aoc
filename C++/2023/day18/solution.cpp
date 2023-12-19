@@ -20,6 +20,8 @@ struct Interval {
   int64_t length;
   int dir;
 
+  bool is_vertical() const { return dir == 2 || dir == 6; };
+
   bool contains(const Point &p) const {
     if (first.x != p.x && first.y != p.y)
       return false;
@@ -158,14 +160,14 @@ vector<Interval> follow_big_plan(const vector<Dig> &plan) {
     dir = d.dir;
 
     first = last;
-    last = {first.x + dx[dir] * d.length, first.y + dy[dir] * d.length};
+    last = {first.x + dx[dir] * d.length, first.y - dy[dir] * d.length};
 
     result.push_back({first, last, d.length, dir});
   }
   return result;
 }
 
-int64_t part1(const vector<Dig> &plan) {
+int64_t part1__pipes(const vector<Dig> &plan) {
 
   auto points = follow_plan(plan);
 
@@ -203,80 +205,33 @@ int64_t part1(const vector<Dig> &plan) {
   return total;
 }
 
-int64_t part1_wrong(const vector<Dig> &plan) {
+int64_t part1(const vector<Dig> &plan) {
+
   auto sides = follow_big_plan(plan);
 
-  Point min{INT64_MAX, INT64_MAX}, max{INT64_MIN, INT64_MIN};
+  int64_t area = 0, perimeter = 0;
 
-  //   print_dig(sides);
+  auto numPoints = sides.size();
+  auto j = numPoints - 1;
 
-  for (auto &s : sides) {
-    for (auto &p : {s.first, s.last}) {
-      if (p.x < min.x)
-        min.x = p.x;
-      if (p.y < min.y)
-        min.y = p.y;
-      if (p.x > max.x)
-        max.x = p.x;
-      if (p.y > max.y)
-        max.y = p.y;
-    }
+  for (auto i = 0; i < numPoints; i++) {
+    auto rect = sides[j].first.x * sides[i].first.y -
+                sides[i].first.x * sides[j].first.y;
+
+    perimeter += (sides[i].length + 1);
+    area += rect;
+    j = i;
   }
 
-  int64_t total = 0;
-  for (int y = min.y; y <= max.y; y++) {
-    for (int x = min.x; x <= max.x; x++) {
-      int intersections = 0;
-      Point p{x, y};
-      for (auto &s : sides) {
+  perimeter -= numPoints;
 
-        if (s.contains(p)) {
-          //   println("(", p.y, ",", p.x, ") contained by ", s.first.x, ",",
-          //           s.first.y, " ", s.last.x, ",", s.last.y, " ", s.dir);
-          intersections = 1;
-          break;
-        }
-
-        if (y > min.y && y < max.y && s.intersects(p)) {
-          intersections++;
-        }
-      }
-      //   println("(", p.y, ",", p.x, ") ", intersections);
-      if ((intersections & 1) == 1) {
-        // print('#');
-        total++;
-      } else {
-        // print('.');
-      }
-    }
-    // println();
-  }
-
-  return total;
-}
-
-int64_t part1_path(const vector<Dig> &plan) {
-  auto sides = follow_big_plan(plan);
-
-  int64_t total = 0;
-
-  int64_t last_x, last_y;
-  for (auto &s : sides) {
-    last_x = 
-  }
-
-  return abs(horizontal) * abs(vertical);
+  return abs(area / 2) + perimeter / 2 + 1;
 }
 
 int64_t part2(const vector<Dig> &plan) {
   auto new_plan = get_new_plan(plan);
 
-  auto moves = follow_big_plan(new_plan);
-  print_dig(moves);
-
-  //   moves = follow_big_plan(plan);
-  //   print_dig(moves);
-  return 0; // part1(new_plan);
+  return part1(new_plan);
 }
 
 int main(int argc, char *argv[]) {

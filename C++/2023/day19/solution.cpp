@@ -42,12 +42,6 @@ struct Range {
 
 constexpr Range MAX_RANGE{MIN_VALUE, MAX_VALUE};
 
-struct Node {
-  int pos;
-  vector<Range> values;
-  Node *left, *right;
-};
-
 struct Part {
   vector<int64_t> values; // {x m a s}
 
@@ -246,20 +240,11 @@ int64_t part2(const map<string, Workflow> workflows) {
   build_tree(workflows, "in", 0, initial, combinations);
 
   int64_t total = 0;
-  for (auto &c1 : combinations) {
-    vector<int> disjoints(4);
-    for (auto &c2 : combinations) {
-      if (c1 != c2) {
-        for (int i = 0; i < 4; i++) {
-          if (c1[i].disjoint(c2[i]))
-            disjoints[i]++;
-        }
-      }
-    }
+  for (auto &c : combinations) {
 
     int64_t mult = 1;
     for (int i = 0; i < 4; i++) {
-      mult *= c1[i].length();
+      mult *= c[i].length();
     }
     total += mult;
   }
