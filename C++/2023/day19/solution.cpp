@@ -164,53 +164,6 @@ vector<Part> read_parts(const vector<string> &lines, int mid_line) {
   return result;
 }
 
-int64_t explore_flows(const map<string, Workflow> workflows,
-                      const string &label, vector<Range> available,
-                      set<string> visited) {
-  visited.insert(label);
-
-  auto current = workflows.at(label);
-
-  int64_t total = 0;
-
-  for (auto r : current.rules) {
-    if (r.dest == "R") {
-      if (r.op) {
-        available[r.pos] = r.accepted();
-      }
-      continue;
-    }
-    if (visited.find(r.dest) == visited.end()) {
-      auto new_ranges = available;
-
-      if (r.op) {
-        Range accepted = r.accepted(), rejected = r.rejected();
-        available[r.pos] = rejected;
-
-        if (new_ranges[r.pos].disjoint(accepted))
-          continue; // Not compatible
-
-        new_ranges[r.pos] = accepted;
-      }
-
-      if (r.dest == "A") {
-
-        int64_t mult = 1;
-        for (int i = 0; i < 4; i++) {
-          auto range = available[i];
-          mult *= range.length();
-        }
-        total += mult;
-
-      } else {
-        total += explore_flows(workflows, r.dest, new_ranges, visited);
-      }
-    }
-  }
-
-  return total;
-}
-
 void build_tree(const map<string, Workflow> workflows, const string &label,
                 int rule_index, vector<Range> remaining,
                 vector<vector<Range>> &combinations) {
@@ -233,8 +186,8 @@ void build_tree(const map<string, Workflow> workflows, const string &label,
 
     vector<Range> next_combination;
     for (int i = 0; i < 4; i++) {
-      auto range = (i == r.pos) ? r.accepted() : available[i];
-      print("[", range.lower, ",", range.upper, "] ");
+      auto range =
+          (i == r.pos) ? r.accepted().intersect(available[i]) : available[i];
       next_combination.push_back(range);
     }
     combinations.push_back(next_combination);
@@ -242,12 +195,11 @@ void build_tree(const map<string, Workflow> workflows, const string &label,
       available[r.pos] = r.rejected().intersect(available[r.pos]);
     }
 
-    println(label, " accepted ");
   } else {
     auto down = available;
 
     if (r.op) {
-      down[r.pos] = r.accepted();
+      down[r.pos] = r.accepted().intersect(available[r.pos]);
 
       available[r.pos] = r.rejected().intersect(available[r.pos]);
     }
@@ -291,8 +243,6 @@ int64_t part2(const map<string, Workflow> workflows) {
   vector<Range> initial = {MAX_RANGE, MAX_RANGE, MAX_RANGE, MAX_RANGE};
   vector<vector<Range>> combinations;
 
-  int64_t question = explore_flows(workflows, "in", initial, {});
-
   build_tree(workflows, "in", 0, initial, combinations);
 
   int64_t total = 0;
@@ -314,7 +264,6 @@ int64_t part2(const map<string, Workflow> workflows) {
     total += mult;
   }
 
-  println(question);
   return total;
 }
 
@@ -327,9 +276,8 @@ int main(int argc, char *argv[]) {
 
   auto r1 = part1(workflows, parts);
   println("Part 1: ", r1);
-  auto r2 = part2(workflows);
-  println();
 
+  auto r2 = part2(workflows);
   println("Part 2: ", r2);
 
   return 0;
