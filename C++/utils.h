@@ -93,6 +93,14 @@ int64_t ipow(int base, int exp) {
   return result;
 }
 
+unsigned modulo(int value, unsigned m) {
+  int mod = value % (int)m;
+  if (mod < 0) {
+    mod += m;
+  }
+  return mod;
+}
+
 /* STD has these now but is good to keep them around
 
 long gcd(long a, long b) { return b == 0 ? a : gcd(b, a % b); }
