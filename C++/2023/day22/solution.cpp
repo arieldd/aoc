@@ -124,13 +124,6 @@ unordered_map<int, Brick> read_snapshot(const vector<string> &lines) {
   return result;
 }
 
-void print_bricks(const vector<Brick> &bricks) {
-  for (auto &b : bricks) {
-    println(b.ends[0].x, ",", b.ends[0].y, ",", b.ends[0].z, "->", b.ends[1].x,
-            ",", b.ends[1].y, ",", b.ends[1].z);
-  }
-}
-
 Report move_to_ground(const unordered_map<int, Brick> snapshot) {
   Report result;
 
@@ -198,24 +191,28 @@ int count_falling(int id, const Report &report) {
 
   int total = 0;
 
-  set<int> counted;
+  Report ledger = report;
+
+  set<int> counted{id};
   deque<int> queue{id};
   while (!queue.empty()) {
     auto current = queue.front();
     queue.pop_front();
-    auto on_top = report.on_top.at(current);
-    print("Checking ", current, " having counted ");
-    for (auto c : counted)
-      print(c, " ");
-    println();
+    auto on_top = ledger.on_top.at(current);
 
-    for (auto i = 1; i < on_top.size(); i++) {
+    for (auto i = 0; i < on_top.size(); i++) {
       int next_id = on_top[i];
-      println(current, " is below ", next_id, " who has ",
-              report.below.at(next_id).size(), " bricks below");
-      auto below = report.below.at(next_id);
-      if (below.size() == 1 && below[0] == current &&
-          counted.find(next_id) == counted.end()) {
+      auto below = ledger.below.at(next_id);
+
+      bool has_support = false;
+      for (auto id : below) {
+        if (counted.find(id) == counted.end()) {
+          has_support = true;
+          break;
+        }
+      }
+
+      if (counted.find(next_id) == counted.end() && !has_support) {
         total++;
         queue.push_back(next_id);
         counted.insert(next_id);
@@ -233,9 +230,7 @@ int part2(const Report &report) {
       int bricks_on_top = on_top.size();
 
       if (bricks_on_top != 0) {
-        // print("Looking at ", b.id);
         int falling = count_falling(b.id, report);
-        // println(" ", falling);
         total += falling;
       }
     }
