@@ -79,19 +79,6 @@ const std::vector<int> dy{0, 1, 1, 1, 0, -1, -1, -1},
 #pragma endregion
 
 #pragma region Math
-int64_t ipow(int base, int exp) {
-  int64_t result = 1;
-  for (;;) {
-    if (exp & 1)
-      result *= base;
-    exp >>= 1;
-    if (!exp)
-      break;
-    base *= base;
-  }
-
-  return result;
-}
 
 unsigned modulo(int value, unsigned m) {
   int mod = value % (int)m;

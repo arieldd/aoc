@@ -1,4 +1,5 @@
 #include "utils.h"
+#include <cmath>
 #include <unordered_map>
 
 using namespace std;
@@ -68,7 +69,7 @@ int part1(const GardenMap &garden, int steps) {
             nx = entry.first.x + dx[d];
 
         Point next{nx, ny};
-        if (garden.grid[ny % n][nx % n].value != '#')
+        if (garden.grid[modulo(ny, n)][modulo(nx, n)].value != '#')
           next_step[next]++;
       }
     }
@@ -100,31 +101,48 @@ vector<int> calculate_odd_pattern(const GardenMap &garden) {
   return res;
 }
 
-int64_t part2(const GardenMap &garden, int steps) {
+int64_t rocks_on_step(const GardenMap &garden, int steps) {
+  int n = garden.grid.size(), half = n / 2;
 
-  int64_t n = garden.grid.size(), half = n / 2;
-  int64_t steps_taken = half;
+  int rocks = 0;
+  for (int i = 1; i <= steps; i++)
+    for (auto row : {half - i, half + i}) {
+      for (int j = i % 2; j < n; j += 2) {
+        if (garden.grid[row][j].value == '#')
+          rocks++;
+      }
+    }
 
-  int64_t base = part1(garden, half);
-  println(half, " ", base);
-
-  int64_t res = base;
-
-  int64_t i;
-  for (i = 2; steps_taken + (i * half) <= steps; i++) {
-    steps_taken += i * half;
-    res += base * ipow(2, i + 1);
-
-    println(steps_taken, " ", res);
+  for (int j = 0; j < n; j += 2) {
+    if (garden.grid[half][j].value == '#')
+      rocks++;
   }
+  return rocks;
+}
 
-  auto remainder = steps - steps_taken;
-  int64_t missing = 0;
-  // part1(garden, remainder) * ipow(2, i + 1);
+int64_t part2(const GardenMap &garden, int steps) {
+  auto n = garden.grid.size();
 
-  println(remainder, " ", i * half, " ", remainder - i * half);
+  int64_t s64 = part1(garden, 64), s65 = part1(garden, 65),
+           s196 = part1(garden, 196);
 
-  return res + missing;
+  int64_t double_pattern = (s196 - 4 * s65 - s64) / 2;
+
+  // println(s64, " ", s65, " ", s196, " x + y = ", double_pattern);
+  // println(9 * s65 + 4 * s64 + 6 * double_pattern);
+
+  int64_t repeat = (steps - 65) / n;
+  println(repeat, " expansions");
+
+  int64_t total_diamonds = pow(2 * repeat + 1, 2),
+           total_65 = pow(repeat + 1, 2), total_64 = pow(repeat, 2),
+           total_double_pattern = (total_diamonds - total_65 - total_64) / 2;
+
+  println(total_diamonds, " ", total_65, " ", total_64, " ",
+          total_double_pattern);
+
+  return total_65 * s65 + total_64 * s64 +
+         total_double_pattern * double_pattern;
 }
 
 int main(int argc, char *argv[]) {
@@ -133,6 +151,7 @@ int main(int argc, char *argv[]) {
   auto large_steps = stoi(argv[3]);
 
   auto garden = read_map(lines);
+  println(garden.grid.size());
 
   auto r1 = part1(garden, steps);
   println("Part 1: ", r1);
