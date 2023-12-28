@@ -1,6 +1,7 @@
 #include "utils.h"
 
 using namespace std;
+using namespace aoc_utils;
 
 struct Number {
   int value;
@@ -42,7 +43,7 @@ struct Board {
 
   bool bingo(int i, int j) {
     bool bingo = true;
-    for (int k = 0; k < numbers.size(); i++) {
+    for (int k = 0; k < numbers.size(); k++) {
       if (!numbers[k][j].marked) {
         bingo = false;
         break;
@@ -52,8 +53,7 @@ struct Board {
       return bingo;
 
     bingo = true;
-
-    for (int k = 0; k < numbers.size(); i++) {
+    for (int k = 0; k < numbers.size(); k++) {
       if (!numbers[i][k].marked) {
         bingo = false;
         break;
@@ -91,6 +91,8 @@ Game parse_game(const vector<string> &lines) {
 
     vector<Number> new_row;
     for (int j = 0; j < entries.size(); j++) {
+      if (entries[j].empty())
+        continue;
       new_row.push_back({stoi(entries[j]), false});
     }
     current.numbers.push_back(new_row);
@@ -110,7 +112,10 @@ void print_game(const Game &game) {
   for (auto &board : game.bingos) {
     for (auto &row : board.numbers) {
       for (auto &entry : row) {
-        print(entry.value, " ");
+        if (entry.marked)
+          print("[", entry.value, "]", " ");
+        else
+          print(entry.value, " ");
       }
       println();
     }
@@ -118,21 +123,11 @@ void print_game(const Game &game) {
   }
 }
 
-vector<string> parse_input(const string &file_name) {
-  vector<string> ret;
-
-  ifstream fs(file_name);
-  string line;
-  while (getline(fs, line)) {
-    ret.push_back(line);
-  }
-  return ret;
-}
-
 int part1(const Game &game) {
+  Game playing = game;
 
-  for (auto n : game.called) {
-    for (auto board : game.bingos) {
+  for (auto n : playing.called) {
+    for (auto &board : playing.bingos) {
       if (board.mark(n)) {
         return board.score(n);
       }
@@ -142,13 +137,31 @@ int part1(const Game &game) {
   return 0;
 }
 
-int part2(const Game &game) { return 0; }
+int part2(const Game &game) {
+  Game playing = game;
+
+  vector<pair<int, int>> winners;
+  for (auto n : playing.called) {
+    for (auto i = 0; i < playing.bingos.size(); i++) {
+      bool won_already = false;
+      for (auto &w : winners)
+        if (w.first == i) {
+          won_already = true;
+          break;
+        }
+
+      if (!won_already && playing.bingos[i].mark(n)) {
+        winners.push_back({i, playing.bingos[i].score(n)});
+      }
+    }
+  }
+
+  return winners.back().second;
+}
 
 int main(int argc, char *argv[]) {
   auto lines = parse_input(argv[1]);
   auto game = parse_game(lines);
-
-  // print_game(game);
 
   auto r1 = part1(game);
   println("Part 1: ", r1);
