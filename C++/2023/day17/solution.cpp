@@ -3,6 +3,7 @@
 #include <unordered_set>
 
 using namespace std;
+using namespace aoc_utils;
 
 struct Block {
   int i;

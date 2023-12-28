@@ -1,6 +1,7 @@
 #include "utils.h"
 
 using namespace std;
+using namespace aoc_utils;
 
 const map<char, int> downhil{{'>', 0}, {'v', 2}, {'<', 4}, {'^', 6}};
 

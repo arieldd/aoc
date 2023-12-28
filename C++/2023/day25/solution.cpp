@@ -2,6 +2,7 @@
 #include <unordered_map>
 
 using namespace std;
+using namespace aoc_utils;
 
 struct Component {
   string label;
@@ -57,10 +58,11 @@ build_adj_list(const unordered_map<string, Component> &graph) {
   return adj;
 }
 
-//From https://en.wikipedia.org/wiki/Stoer%E2%80%93Wagner_algorithm#Example_code
+// From
+// https://en.wikipedia.org/wiki/Stoer%E2%80%93Wagner_algorithm#Example_code
 pair<int, vector<int>> global_min_cut(vector<vector<int>> adj) {
   pair<int, vector<int>> cut = {INT_MAX, {}};
-  
+
   auto n = adj.size();
   vector<vector<int>> contractions(n);
 
@@ -78,7 +80,8 @@ pair<int, vector<int>> global_min_cut(vector<vector<int>> adj) {
         w[i] += adj[t][i];
     }
     cut = min(cut, {w[t] - adj[t][t], contractions[t]});
-    contractions[s].insert(contractions[s].end(), contractions[t].begin(), contractions[t].end());
+    contractions[s].insert(contractions[s].end(), contractions[t].begin(),
+                           contractions[t].end());
     for (int i = 0; i < n; i++)
       adj[s][i] += adj[t][i];
     for (int i = 0; i < n; i++)

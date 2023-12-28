@@ -1,6 +1,8 @@
 #include "utils.h"
 
 using namespace std;
+using namespace aoc_utils;
+
 using number = uint64_t;
 
 struct Range {
