@@ -5,10 +5,12 @@
 #include <iostream>
 #include <map>
 #include <numeric>
+#include <ranges>
 #include <set>
 #include <sstream>
 #include <string>
 #include <vector>
+
 
 namespace aoc_utils {
 std::vector<std::string> parse_input(const std::string &file_name) {
