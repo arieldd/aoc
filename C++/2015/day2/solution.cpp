@@ -1,15 +1,7 @@
-#include <algorithm>
-#include <fstream>
-#include <functional>
-#include <iostream>
-#include <map>
-#include <numeric>
-#include <string>
-#include <vector>
-
 #include "utils.h"
 
 using namespace std;
+using namespace aoc_utils;
 
 tuple<int, int, int> get_dimensions(const string &line) {
   int w, l, h;
@@ -26,7 +18,7 @@ tuple<int, int, int> get_dimensions(const string &line) {
   return {w, l, h};
 }
 
-vector<tuple<int, int, int>> parse_input(const string &file_name) {
+vector<tuple<int, int, int>> read_presents(const string &file_name) {
   vector<std::string> ret;
 
   ifstream fs(file_name);
@@ -65,8 +57,8 @@ int part2(const vector<tuple<int, int, int>> &boxes) {
   return total;
 }
 
-int main() {
-  auto boxes = parse_input("input.txt");
+int main(int argc, char *argv[]) {
+  auto boxes = read_presents(argv[1]);
   auto r1 = part1(boxes);
   println("Part 1: ", r1);
   auto r2 = part2(boxes);

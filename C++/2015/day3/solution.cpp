@@ -1,16 +1,7 @@
-#include <algorithm>
-#include <fstream>
-#include <functional>
-#include <iostream>
-#include <map>
-#include <numeric>
-#include <set>
-#include <string>
-#include <vector>
-
 #include "utils.h"
 
 using namespace std;
+using namespace aoc_utils;
 
 struct move_t {
   int x;
@@ -28,7 +19,7 @@ bool operator<(const move_t &lhs, const move_t &rhs) {
 const map<char, move_t> deltas{
     {'>', {1, 0}}, {'v', {0, 1}}, {'<', {-1, 0}}, {'^', {0, -1}}};
 
-vector<move_t> parse_input(const string &file_name) {
+vector<move_t> read_moves(const string &file_name) {
   vector<std::string> ret;
 
   ifstream fs(file_name);
@@ -78,8 +69,8 @@ int part2(const vector<move_t> &moves) {
   return visited.size();
 }
 
-int main() {
-  auto moves = parse_input("input.txt");
+int main(int argc, char *argv[]) {
+  auto moves = read_moves(argv[1]);
   auto r1 = part1(moves);
   println("Part 1: ", r1);
   auto r2 = part2(moves);
