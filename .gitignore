@@ -2,4 +2,5 @@
 *.exe
 *.out
 *.ps1
+*.pdb
 .vscode

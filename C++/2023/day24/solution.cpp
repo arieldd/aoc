@@ -1,14 +1,13 @@
 #include "utils.h"
-#include <Eigen/Dense>
-#include <ranges>
+#include <optional>
 
 using namespace std;
-using namespace Eigen;
+using namespace aoc_utils;
 
 struct Hailstone {
 
-  Vector<int64_t, 3> pos;
-  Vector3i velocity;
+  vector<int64_t> pos;
+  vector<int> velocity;
 };
 
 vector<Hailstone> read_hails(const vector<string> &lines) {
@@ -20,14 +19,14 @@ vector<Hailstone> read_hails(const vector<string> &lines) {
     auto position = split(sides[0], ',');
     int i = 0;
     for (auto &p : position) {
-      next.pos(i) = stoll(p);
+      next.pos.push_back(stoll(p));
       i++;
     }
 
     auto velocity = split(sides[1], ',');
     i = 0;
     for (auto &v : velocity) {
-      next.velocity(i) = stoi(v);
+      next.velocity.push_back(stoi(v));
       i++;
     }
     result.push_back(next);
@@ -36,70 +35,45 @@ vector<Hailstone> read_hails(const vector<string> &lines) {
   return result;
 }
 
-bool find_future_intersection(const Hailstone &h1, const Hailstone &h2,
-                              double &outX, double &outY) {
+optional<pair<double, double>>
+intersect2d(const Hailstone &h1, const Hailstone &h2, int axis_1, int axis_2) {
 
-  auto p1 = h1.pos, p2 = h2.pos;
-  auto v1 = h1.velocity, v2 = h2.velocity;
+  auto dx = h2.pos[axis_1] - h1.pos[axis_1],
+       dy = h2.pos[axis_2] - h1.pos[axis_2];
 
-  Matrix2<double> A;
-  A << v1.head(2).cast<double>(), v2.head(2).cast<double>();
-  A.transpose();
-  Vector<double, 2> b(p2[0] - p1[0], p2[1] - p1[1]);
+  auto det = h2.velocity[axis_1] * h1.velocity[axis_2] -
+             h2.velocity[axis_2] * h1.velocity[axis_1];
 
-  auto solution = A.colPivHouseholderQr().solve(b);
+  if (det != 0) {
+    double t1 = (dy * h2.velocity[axis_1] - dx * h2.velocity[axis_2]) /
+                (double)det,
+           t2 = (dy * h1.velocity[axis_1] - dx * h1.velocity[axis_2]) /
+                (double)det;
 
-  auto t = solution(0), s = solution(1);
-
-  outX = p1(0) + v1(0) * t;
-  outY = p1(1) + v1(1) * t;
-
-  auto x1 = p1(0) + v1(0), x2 = p2(0) + v2(0);
-
-  if (t == 0 || s == 0 // Parallal
-      || abs(outX - x1) > abs(outX - p1(0)) ||
-      abs(outX - x2) > abs(outX - p2(0))) // Past interssection
-    return false;
-
-  return true;
-}
-
-tuple<int64_t, int64_t, int64_t>
-find_least_squares(const vector<Hailstone> &hails) {
-  auto n = hails.size();
-
-  Vector<double, Dynamic> b;
-
-  vector<Vector3d> columns;
-  for (int i = 1; i < n; i++) {
-    columns.push_back(
-        (hails[i].velocity - hails[i - 1].velocity).cast<double>());
-    b << (hails[i].pos - hails[i - 1].pos).cast<double>();
+    if (t1 >= 0 && t2 >= 0) {
+      double x = h1.pos[axis_1] + t1 * h1.velocity[axis_1],
+             y = h1.pos[axis_2] + t1 * h1.velocity[axis_2];
+      return {{x, y}};
+    }
   }
-
-  // MatrixX<double> A(columns.data());
-
-  // A << (1, 1, 1);
-  // A.transpose();
-
-  // println(A, b);
-
-  // auto solution = A.colPivHouseholderQr().solve(b);
-  // print(solution);
 
   return {};
 }
 
-int part1(const vector<Hailstone> &hails, int64_t lower, int64_t upper) {
-  int count = 0;
+int64_t part1(const vector<Hailstone> &hails, int64_t lower, int64_t upper) {
+  int64_t count = 0;
 
-  double outX, outY;
   auto n = hails.size();
   for (int i = 0; i < n - 1; i++) {
     for (int j = i + 1; j < n; j++) {
-      if (find_future_intersection(hails[i], hails[j], outX, outY) &&
-          lower <= outX && outX <= upper && lower <= outY && outY <= upper) {
-        count++;
+      auto point = intersect2d(hails[i], hails[j], 0, 1);
+      if (point) {
+
+        auto [x, y] = *point;
+
+        if (x >= lower && x <= upper && y >= lower && y <= upper) {
+          count++;
+        }
       }
     }
   }
@@ -107,74 +81,93 @@ int part1(const vector<Hailstone> &hails, int64_t lower, int64_t upper) {
   return count;
 }
 
-void move_to_time(vector<Hailstone> &hails, int time) {
-  for (int i = 0; i < time; i++)
-    for (auto &h : hails) {
-      h.pos += h.velocity.cast<int64_t>();
-    }
-}
-
 int64_t part2_bf(const vector<Hailstone> &hails) {
 
   auto n = hails.size();
+  auto bf = 1000; // Random good enough velocity range to brute force
 
-  auto comp = [](const Hailstone &h1, const Hailstone &h2) {
-    return h1.pos(2) > h2.pos(2); // order descending by Z coord
-  };
-  // for (auto &h : trajectories) {
-  //   println(RowVector3<int64_t>(h.pos));
-  // }
-  for (int i = 1; i <= n; i++) {
-    auto trajectories = hails;
-    move_to_time(trajectories, i);
-    sort(trajectories.begin(), trajectories.end(), comp);
-    auto p1 = trajectories.back().pos;
-    trajectories.pop_back();
+  int good_enough = 10; // 3d lines very rarely intersect so if more than lets
+                        // say 10 do we probably got it.
 
-    // println("Cutting ", RowVector3<int64_t>(p1), " at time ", i);
-    for (int j = i + 1; j < 2 * n; j++) {
-      move_to_time(trajectories, 1);
-      sort(trajectories.begin(), trajectories.end(), comp);
-      auto p2 = trajectories.back().pos;
+  bool found_xy = false;
 
-      auto line = Hailstone{p1, (p2 - p1).cast<int>()};
+  vector<double> result(3, DBL_MIN);
 
-      // println("Cutting ", RowVector3<int64_t>(p2), " at time ", j);
+  int vx, vy;
+  for (vx = -bf; vx <= bf && !found_xy; vx++) {
+    println("Trying vx ", vx);
+    for (vy = -bf; vy <= bf && !found_xy; vy++) {
 
-      // println("Tentative line is ", RowVector3<int64_t>(line.pos), "->",
-      //         RowVector3<int>(line.velocity));
+      auto h1 = hails[0];
+      h1.velocity[0] += vx;
+      h1.velocity[1] += vy;
 
-      bool intersects_all = true;
-      for (int time = j + 1; time < 2 * n; time++) {
-        println("cheking time ", time);
-        vector<Hailstone> rest(trajectories.begin() + 1, trajectories.end());
-        sort(rest.begin(), rest.end(), comp);
-        move_to_time(rest, 1);
-        auto next = rest.back();
+      result.clear();
 
-        line.pos += line.velocity.cast<int64_t>();
-        if (line.pos != next.pos && line.pos[2] > next.pos[2]) {
-          intersects_all = false;
+      int i;
+      for (i = 1; i <= good_enough; i++) {
+
+        auto h2 = hails[i];
+        h2.velocity[0] += vx;
+        h2.velocity[1] += vy;
+
+        auto point = intersect2d(h1, h2, 0, 1);
+
+        if (!point) {
           break;
         }
+
+        auto [x, y] = *point;
+
+        if (i > 1 && (result[0] != x || result[1] != y))
+          break;
+
+        if (i == 1) {
+          result[0] = x;
+          result[1] = y;
+        }
       }
-      if (intersects_all) {
-        line = Hailstone{p1, (p2 - p1).cast<int>()};
-        println(RowVector3<int64_t>(line.pos), RowVector3<int>(line.velocity));
-        line.pos -= line.velocity.cast<int64_t>();
-        println(line.pos);
-        return line.pos.sum();
+      if (i == good_enough) {
+        found_xy = true;
       }
     }
   }
 
-  return 0;
-}
+  println("Found x y: ", result[0], " ", result[1]);
+  vx--;
+  int vz;
+  for (vz = -bf; vz <= bf; vz++) {
+    auto h1 = hails[0];
+    h1.velocity[0] += vx;
+    h1.velocity[2] += vz;
 
-int part2_ls(const vector<Hailstone> &hails) {
-  auto solution = find_least_squares(hails);
+    int i;
+    for (i = 1; i <= good_enough; i++) {
 
-  return 0;
+      auto h2 = hails[i];
+      h2.velocity[0] += vx;
+      h2.velocity[2] += vz;
+
+      auto point = intersect2d(h1, h2, 0, 2);
+
+      if (!point) {
+        break;
+      }
+
+      auto [x, z] = *point;
+
+      if (i > 1 && (result[0] != x || result[2] != z))
+        break;
+
+      if (i == 1) {
+        result[1] = z;
+      }
+    }
+
+    if (i == good_enough)
+      break;
+  }
+  return result[0] + result[1] + result[2];
 }
 
 int main(int argc, char *argv[]) {
