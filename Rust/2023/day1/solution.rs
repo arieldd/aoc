@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::env;
 use std::fs;
 
@@ -26,38 +25,24 @@ fn part1(lines: &[&str]) -> u32 {
 }
 
 fn part2(lines: &[&str]) -> u32 {
-    let digit_names: HashMap<&str, u32> = HashMap::from([
-        ("one", 1),
-        ("two", 2),
-        ("three", 3),
-        ("four", 4),
-        ("five", 5),
-        ("six", 6),
-        ("seven", 7),
-        ("eight", 8),
-        ("nine", 9),
-    ]);
+    let digit_names = [
+        "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+    ];
 
     let mut count = 0;
 
     for l in lines {
         let mut digits: Vec<u32> = vec![];
-        for i in 0..l.len() {
-            let c = l.chars().nth(i).unwrap();
-            if c.is_ascii_digit() {
-                digits.push(c.to_digit(10).unwrap());
-            } else {
-                for k in 2..=4 {
-                    if i + k < l.len() {
-                        let slice = &l[i..=i + k];
-                        if digit_names.contains_key(slice) {
-                            digits.push(digit_names[slice]);
-                        }
-                    }
-                }
+        for (i, c) in l.char_indices() {
+            match c.to_digit(10) {
+                Some(x) => digits.push(x),
+                None => match digit_names.iter().position(|s| l[i..].starts_with(s)) {
+                    Some(pos) => digits.push((pos + 1) as u32),
+                    None => (),
+                },
             }
         }
-        let number: u32 = (digits[0] * 10 + digits[digits.len() - 1]).into();
+        let number = (digits[0] * 10 + digits[digits.len() - 1]) as u32;
         count += number;
     }
 
