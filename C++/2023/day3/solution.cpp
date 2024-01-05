@@ -1,6 +1,7 @@
 #include "utils.h"
 
 using namespace std;
+using namespace aoc_utils;
 
 struct Part {
   int number;
