@@ -9,7 +9,7 @@ import (
 func main() {
 
 	if len(os.Args) < 2 {
-		fmt.Println("Please procide input file")
+		fmt.Println("Please provide an input file")
 		return
 	}
 
@@ -29,13 +29,13 @@ func main() {
 		lines = append(lines, scanner.Text())
 	}
 
-	part1(lines)
-	part2(lines)
+	fmt.Printf("Part 1: %d\n", part1(lines))
+	fmt.Printf("Part 1: %d\n", part2(lines))
 }
 
-func part1(lines []string) {
+func part1(lines []string) int {
 	var (
-		gamma []byte
+		gamma   []byte
 		epsilon []byte
 	)
 
@@ -59,16 +59,14 @@ func part1(lines []string) {
 		}
 	}
 
-	result := toDecimal(string(gamma)) * toDecimal(string(epsilon))
-	fmt.Printf("Part 1: %d\n", result)
+	return toDecimal(string(gamma)) * toDecimal(string(epsilon))
 }
 
-func part2(lines []string) {
+func part2(lines []string) int {
 	oxygen := filter(lines, 0, '1')
 	co2 := filter(lines, 0, '0')
 
-	result := toDecimal(oxygen) * toDecimal(co2)
-	fmt.Printf("Part 2: %d\n", result)
+	return toDecimal(oxygen) * toDecimal(co2)
 }
 
 func filter(lines []string, index int, value byte) string {
