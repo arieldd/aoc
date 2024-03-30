@@ -38,25 +38,25 @@ func main() {
 	}
 
 	grid := parsegrid(lines)
-	printGrid(grid)
 
-	flashes := part1(&grid, 2)
-	fmt.Printf("Flashed %d times\n", flashes)
+	flashes := part1(grid, 100)
+	fmt.Printf("Flashed %d times\n\n", flashes)
 
-	printGrid(grid)
 	return
 }
 
-func part1(grid *[gridSize][gridSize]Octopus, steps int) (flashes int) {
+func part1(grid [][]Octopus, steps int) (flashes int) {
 	flashes = 0
 
+	printGrid(grid)
 	for range steps {
 		flashes += simulateStep(grid)
 	}
+	printGrid(grid)
 	return flashes
 }
 
-func simulateStep(grid *[gridSize][gridSize]Octopus) (flashes int) {
+func simulateStep(grid [][]Octopus) (flashes int) {
 	flashes = 0
 	for i, row := range grid {
 		for j := range row {
@@ -83,15 +83,15 @@ func simulateStep(grid *[gridSize][gridSize]Octopus) (flashes int) {
 	return flashes
 }
 
-func flash(grid *[gridSize][gridSize]Octopus, i, j int) (flashes int) {
+func flash(grid [][]Octopus, i, j int) (flashes int) {
 	grid[i][j].flashed = true
 
-	flashes++
+	flashes = 1
 	for k := range dirs {
 		ni := i + dy[k]
 		nj := j + dx[k]
 		if isValid(ni, nj, gridSize) {
-			oct := grid[ni][nj]
+			oct := &grid[ni][nj]
 			oct.energy++
 			if oct.energy > 9 && !oct.flashed {
 				flashes += flash(grid, ni, nj)
@@ -106,7 +106,7 @@ func isValid(ni, nj, gridSize int) bool {
 	return ni >= 0 && nj >= 0 && ni < gridSize && nj < gridSize
 }
 
-func printGrid(grid [gridSize][gridSize]Octopus) {
+func printGrid(grid [][]Octopus) {
 	for _, row := range grid {
 		for _, oct := range row {
 			if oct.energy == 0 {
@@ -117,9 +117,15 @@ func printGrid(grid [gridSize][gridSize]Octopus) {
 		}
 		fmt.Println()
 	}
+	fmt.Println()
 }
 
-func parsegrid(lines []string) (grid [gridSize][gridSize]Octopus) {
+func parsegrid(lines []string) (grid [][]Octopus) {
+	grid = make([][]Octopus, gridSize)
+	for i := range gridSize {
+		grid[i] = make([]Octopus, gridSize)
+	}
+
 	for i, l := range lines {
 		for j, c := range l {
 			grid[i][j] = Octopus{energy: int(c - '0')}
