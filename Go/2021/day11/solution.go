@@ -37,11 +37,13 @@ func main() {
 		lines = append(lines, scanner.Text())
 	}
 
-	grid := parsegrid(lines)
+	grid := parseGrid(lines)
 
 	flashes := part1(grid, 100)
-	fmt.Printf("Flashed %d times\n\n", flashes)
+	fmt.Printf("Part 1: %d \n\n", flashes)
 
+	steps := part2(grid)
+	fmt.Printf("Part 2: %d \n\n", steps+100)
 	return
 }
 
@@ -56,8 +58,22 @@ func part1(grid [][]Octopus, steps int) (flashes int) {
 	return flashes
 }
 
-func simulateStep(grid [][]Octopus) (flashes int) {
-	flashes = 0
+func part2(grid [][]Octopus) (step int) {
+	step = 1
+	printGrid(grid)
+	for {
+		stepFlashes := simulateStep(grid)
+		if stepFlashes == gridSize*gridSize {
+			break
+		}
+		step++
+	}
+	printGrid(grid)
+	return step
+}
+
+func simulateStep(grid [][]Octopus) (flashCount int) {
+	flashCount = 0
 	for i, row := range grid {
 		for j := range row {
 			grid[i][j].energy++
@@ -67,7 +83,7 @@ func simulateStep(grid [][]Octopus) (flashes int) {
 	for i, row := range grid {
 		for j, oct := range row {
 			if oct.energy > 9 && !oct.flashed {
-				flashes += flash(grid, i, j)
+				flashCount += flash(grid, i, j)
 			}
 		}
 	}
@@ -80,7 +96,7 @@ func simulateStep(grid [][]Octopus) (flashes int) {
 			}
 		}
 	}
-	return flashes
+	return flashCount
 }
 
 func flash(grid [][]Octopus, i, j int) (flashes int) {
@@ -120,7 +136,7 @@ func printGrid(grid [][]Octopus) {
 	fmt.Println()
 }
 
-func parsegrid(lines []string) (grid [][]Octopus) {
+func parseGrid(lines []string) (grid [][]Octopus) {
 	grid = make([][]Octopus, gridSize)
 	for i := range gridSize {
 		grid[i] = make([]Octopus, gridSize)
