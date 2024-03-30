@@ -3,6 +3,7 @@
 #include <unordered_map>
 
 using namespace std;
+using namespace aoc_utils;
 
 struct Point {
   int x;
@@ -124,7 +125,7 @@ int64_t part2(const GardenMap &garden, int steps) {
   auto n = garden.grid.size();
 
   int64_t s64 = part1(garden, 64), s65 = part1(garden, 65),
-           s196 = part1(garden, 196);
+          s196 = part1(garden, 196);
 
   int64_t double_pattern = (s196 - 4 * s65 - s64) / 2;
 
@@ -135,8 +136,8 @@ int64_t part2(const GardenMap &garden, int steps) {
   println(repeat, " expansions");
 
   int64_t total_diamonds = pow(2 * repeat + 1, 2),
-           total_65 = pow(repeat + 1, 2), total_64 = pow(repeat, 2),
-           total_double_pattern = (total_diamonds - total_65 - total_64) / 2;
+          total_65 = pow(repeat + 1, 2), total_64 = pow(repeat, 2),
+          total_double_pattern = (total_diamonds - total_65 - total_64) / 2;
 
   println(total_diamonds, " ", total_65, " ", total_64, " ",
           total_double_pattern);
