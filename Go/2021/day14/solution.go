@@ -42,17 +42,18 @@ func readLines(filename string) (lines []string) {
 	return lines
 }
 
-func solve(tmpl string, pairs map[string]string, steps int) int {
+func solve(tmpl string, pairs map[string]string, steps int) int64 {
 	polymer := tmpl
-	for range steps {
+	for i := range steps {
+		fmt.Println("Step: ", i, " - ", polymer)
 		polymer = doStep(polymer, pairs)
 	}
-	counts := make(map[rune]int)
+	counts := make(map[rune]int64)
 	for _, char := range polymer {
 		counts[char]++
 	}
 
-	maxCount, minCount := 0, len(polymer)
+	maxCount, minCount := int64(0), int64(len(polymer))
 	for _, v := range counts {
 		if v < minCount {
 			minCount = v
