@@ -93,6 +93,11 @@ func part2(points map[point]struct{}, folds []foldInstr) {
 		doFold(points, fold)
 	}
 
+	printPoints(points)
+}
+
+func printPoints(points map[point]struct{}) {
+	// Find bounding box for the points
 	minX, maxX, minY, maxY := math.MaxInt, math.MinInt, math.MaxInt, math.MinInt
 	for p := range points {
 		if p.x > maxX {
@@ -118,6 +123,7 @@ func part2(points map[point]struct{}, folds []foldInstr) {
 		grid[i] = make([]int, sizeX)
 	}
 
+	// Mark the points in the grid, displaced by minX, minY
 	for p := range points {
 		grid[p.y-minY][p.x-minX] = 1
 	}
