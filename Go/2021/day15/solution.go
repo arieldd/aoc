@@ -4,7 +4,6 @@ import (
 	"aoc/go/utils"
 	"bufio"
 	"fmt"
-	"math"
 	"os"
 )
 
@@ -48,41 +47,40 @@ func readGrid(lines []string) (grid [][]int) {
 func solve(grid [][]int, size int) int {
 	start := node{0, 0, grid[0][0]}
 	end := node{size - 1, size - 1, getRisk(grid, size-1, size-1, size)}
-	return lowestRisk(grid, make([]node, 0), start, end, size)
+	visited := map[struct{ i, j int }]struct{}{}
+	return lowestRisk(grid, visited, start, end, size)
 }
 
 type node struct {
 	r, c, risk int
 }
 
-func lowestRisk(grid [][]int, visited []node, start, end node, size int) (lowestRisk int) {
+func lowestRisk(grid [][]int, visited map[struct{ i, j int }]struct{}, start, end node, size int) int {
 	pq := make(utils.PQ[node], 0)
 	pq.Init()
 
 	start.risk = 0
 	pq.TPush(start, start.risk)
 
-	lowestRisk = math.MaxInt32
 	for pq.Len() > 0 {
 		current := pq.TPop()
-		if contains(visited, current) {
+		if _, found := visited[struct {
+			i int
+			j int
+		}{current.r, current.c}]; found {
 			continue
 		}
 
-		if equals(current, end) && current.risk < lowestRisk {
-			fmt.Println("Found end")
-			lowestRisk = current.risk
-			return lowestRisk
+		if equals(current, end) {
+			return current.risk
 		}
 
-		visited = append(visited, current)
+		visited[struct{ i, j int }{current.r, current.c}] = struct{}{}
 
 		for k := 0; k < utils.Dirs; k += 2 {
 			ni := current.r + utils.Dy[k]
 			nj := current.c + utils.Dx[k]
 
-			// if utils.IsValid(ni, nj, size) {
-			// 	risk := grid[ni][nj]
 			if risk := getRisk(grid, ni, nj, size); risk != -1 {
 				next := node{ni, nj, risk + current.risk}
 				pq.TPush(next, next.risk)
@@ -90,7 +88,7 @@ func lowestRisk(grid [][]int, visited []node, start, end node, size int) (lowest
 		}
 	}
 
-	return lowestRisk
+	return -1
 }
 
 func getRisk(grid [][]int, i, j, size int) int {
@@ -114,13 +112,4 @@ func getRisk(grid [][]int, i, j, size int) int {
 
 func equals(a, b node) bool {
 	return a.r == b.r && a.c == b.c
-}
-
-func contains(list []node, x node) bool {
-	for _, node := range list {
-		if node.r == x.r && node.c == x.c {
-			return true
-		}
-	}
-	return false
 }
