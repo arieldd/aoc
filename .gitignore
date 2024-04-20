@@ -4,3 +4,6 @@
 *.ps1
 *.pdb
 .vscode
+target/
+*.lock
+
