@@ -7,8 +7,8 @@ fn main() {
 
     let (gears, parts) = read_schematic(&input);
 
-    println!("Part 1: {}", part1(&&gears, &parts));
-    println!("Part 2: {}", part2(&&gears, &parts));
+    println!("Part 1: {}", part1(&gears, &parts));
+    println!("Part 2: {}", part2(&gears, &parts));
 }
 
 static DX: [i32; 8] = [1, 1, 0, -1, -1, -1, 0, 1];
