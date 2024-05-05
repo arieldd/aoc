@@ -44,6 +44,7 @@ func readLines(filename string) (lines []string) {
 	}
 	return lines
 }
+
 func readInstr(lines []string) (points map[point]struct{}, folds []foldInstr) {
 	points = make(map[point]struct{}, 0)
 

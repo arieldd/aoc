@@ -38,8 +38,8 @@ fn part1(almanac: &Almanac) -> i64 {
     }
 }
 
-fn part2(_almanac: &Almanac) -> i64 {
-    // let mut seed_ranges: Vec<Range> = almanac.seeds.chunks(2).map(|c| Range(c[0], c[1])).collect();
+fn part2(almanac: &Almanac) -> i64 {
+    let mut seed_ranges: Vec<Range> = almanac.seeds.chunks(2).map(|c| Range(c[0], c[1])).collect();
 
     0
 }
@@ -47,7 +47,7 @@ fn part2(_almanac: &Almanac) -> i64 {
 fn read_almanac(lines: &[&str]) -> Almanac {
     let seeds = lines[0]
         .split(" ")
-        .skip(1)
+        .skip(1) //Skip 'seeds:'
         .map(|s| s.parse::<i64>().expect("Failed to parse seed value"))
         .collect::<Vec<_>>();
 
@@ -114,6 +114,14 @@ impl Range {
 
     fn convert(&self, other: &Range, value: i64) -> i64 {
         other.0 + (value - self.0)
+    }
+
+    fn split(&self, by: &Range) -> Option<Vec<Range>> {
+        if !self.intercepts(by) {
+            return None;
+        }
+
+        Some(vec![])
     }
 }
 
