@@ -17,7 +17,7 @@ fn main() {
 }
 
 fn part1(almanac: &Almanac) -> i64 {
-    match almanac
+    almanac
         .seeds
         .iter()
         .map(|s| {
@@ -33,10 +33,7 @@ fn part1(almanac: &Almanac) -> i64 {
             value
         })
         .min()
-    {
-        Some(loc) => loc,
-        None => -1,
-    }
+        .expect("Locations should have a minimum")
 }
 
 fn part2(almanac: &Almanac) -> i64 {
@@ -46,53 +43,44 @@ fn part2(almanac: &Almanac) -> i64 {
         .map(|c| Range(c[0], c[0] + c[1] - 1))
         .collect();
 
-    match seed_ranges
+    seed_ranges
         .iter()
         .map(|sr| {
-            let mut prev = vec![*sr];
-            let mut next: Vec<Range> = vec![];
+            let mut current_ranges = vec![*sr];
+            let mut converted_ranges: Vec<Range> = vec![];
 
             for map in almanac.maps.iter() {
-                loop {
-                    match prev.pop() {
-                        Some(r) => {
-                            let mut found = false;
-                            for pair in map {
-                                match r.split(&pair.0) {
-                                    Some(split) => {
-                                        found = true;
-                                        let mut first = split[0];
-                                        first.0 = pair.0.convert(&pair.1, first.0);
-                                        first.1 = pair.0.convert(&pair.1, first.1);
-                                        next.push(first);
+                while let Some(range) = current_ranges.pop() {
+                    let mut found = false;
+                    for pair in map {
+                        if let Some(split) = range.split(&pair.0) {
+                            let mut first = split[0];
+                            first.0 = pair.0.convert(&pair.1, first.0);
+                            first.1 = pair.0.convert(&pair.1, first.1);
+                            converted_ranges.push(first);
 
-                                        prev.extend(split[1..].iter());
-                                        break;
-                                    }
-                                    None => (),
-                                }
-                            }
+                            current_ranges.extend(split[1..].iter());
 
-                            if !found {
-                                next.push(r);
-                            }
+                            found = true;
+                            break;
                         }
-                        None => break,
+                    }
+
+                    if !found {
+                        converted_ranges.push(range);
                     }
                 }
-                prev = next.clone();
-                next.clear();
+                current_ranges = converted_ranges.clone();
+                converted_ranges.clear();
             }
-            prev.iter()
+            current_ranges
+                .iter()
                 .min_by(|r1, r2| r1.0.cmp(&r2.0))
-                .expect("No min range found")
+                .expect("Converted ranges should have a minimum")
                 .0
         })
         .min()
-    {
-        Some(loc) => loc,
-        None => -1,
-    }
+        .expect("Locations should have a minimum")
 }
 
 fn read_almanac(lines: &[&str]) -> Almanac {
@@ -163,8 +151,8 @@ impl Range {
         self.0 <= value && self.1 >= value
     }
 
-    fn convert(&self, other: &Self, value: i64) -> i64 {
-        other.0 + (value - self.0)
+    fn convert(&self, to: &Self, value: i64) -> i64 {
+        to.0 + (value - self.0)
     }
 
     fn split(&self, by: &Self) -> Option<Vec<Range>> {
