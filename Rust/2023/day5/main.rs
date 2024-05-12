@@ -1,3 +1,4 @@
+use std::cmp;
 use std::env;
 use std::fs;
 
@@ -39,9 +40,59 @@ fn part1(almanac: &Almanac) -> i64 {
 }
 
 fn part2(almanac: &Almanac) -> i64 {
-    let mut seed_ranges: Vec<Range> = almanac.seeds.chunks(2).map(|c| Range(c[0], c[1])).collect();
+    let seed_ranges: Vec<Range> = almanac
+        .seeds
+        .chunks(2)
+        .map(|c| Range(c[0], c[0] + c[1] - 1))
+        .collect();
 
-    0
+    match seed_ranges
+        .iter()
+        .map(|sr| {
+            let mut prev = vec![*sr];
+            let mut next: Vec<Range> = vec![];
+
+            for map in almanac.maps.iter() {
+                loop {
+                    match prev.pop() {
+                        Some(r) => {
+                            let mut found = false;
+                            for pair in map {
+                                match r.split(&pair.0) {
+                                    Some(split) => {
+                                        found = true;
+                                        let mut first = split[0];
+                                        first.0 = pair.0.convert(&pair.1, first.0);
+                                        first.1 = pair.0.convert(&pair.1, first.1);
+                                        next.push(first);
+
+                                        prev.extend(split[1..].iter());
+                                        break;
+                                    }
+                                    None => (),
+                                }
+                            }
+
+                            if !found {
+                                next.push(r);
+                            }
+                        }
+                        None => break,
+                    }
+                }
+                prev = next.clone();
+                next.clear();
+            }
+            prev.iter()
+                .min_by(|r1, r2| r1.0.cmp(&r2.0))
+                .expect("No min range found")
+                .0
+        })
+        .min()
+    {
+        Some(loc) => loc,
+        None => -1,
+    }
 }
 
 fn read_almanac(lines: &[&str]) -> Almanac {
@@ -100,28 +151,52 @@ struct Almanac {
     maps: Vec<Vec<(Range, Range)>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Hash, Copy, Clone, Eq)]
 struct Range(i64, i64);
 
 impl Range {
-    fn intercepts(&self, other: &Range) -> bool {
-        (self.0 - other.1) * (self.1 - other.0) <= 0
+    fn intercepts(&self, other: &Self) -> bool {
+        (self.0 - other.1).signum() * (self.1 - other.0).signum() <= 0
     }
 
     fn contains(&self, value: i64) -> bool {
         self.0 <= value && self.1 >= value
     }
 
-    fn convert(&self, other: &Range, value: i64) -> i64 {
+    fn convert(&self, other: &Self, value: i64) -> i64 {
         other.0 + (value - self.0)
     }
 
-    fn split(&self, by: &Range) -> Option<Vec<Range>> {
+    fn split(&self, by: &Self) -> Option<Vec<Range>> {
         if !self.intercepts(by) {
             return None;
         }
 
-        Some(vec![])
+        let mut result = vec![];
+        let first = Range(cmp::max(self.0, by.0), cmp::min(self.1, by.1));
+
+        result.push(first);
+
+        if first == *self {
+            return Some(result);
+        }
+
+        if first == *by {
+            result.push(Range(self.0, first.0 - 1));
+            result.push(Range(first.1 + 1, self.1));
+        } else if self.0 < by.0 {
+            result.push(Range(self.0, first.0 - 1));
+        } else {
+            result.push(Range(first.1 + 1, self.1));
+        }
+
+        Some(result)
+    }
+}
+
+impl PartialEq for Range {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0 && self.1 == other.1
     }
 }
 
