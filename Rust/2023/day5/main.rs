@@ -46,20 +46,20 @@ fn part2(almanac: &Almanac) -> i64 {
     seed_ranges
         .iter()
         .map(|sr| {
-            let mut current_ranges = vec![*sr];
-            let mut converted_ranges: Vec<Range> = vec![];
+            let mut src_ranges = vec![*sr];
+            let mut dest_ranges: Vec<Range> = vec![];
 
             for map in almanac.maps.iter() {
-                while let Some(range) = current_ranges.pop() {
+                while let Some(range) = src_ranges.pop() {
                     let mut found = false;
                     for pair in map {
                         if let Some(split) = range.split(&pair.0) {
-                            let mut first = split[0];
-                            first.0 = pair.0.convert(&pair.1, first.0);
-                            first.1 = pair.0.convert(&pair.1, first.1);
-                            converted_ranges.push(first);
+                            let mut intersect = split[0];
+                            intersect.0 = pair.0.convert(&pair.1, intersect.0);
+                            intersect.1 = pair.0.convert(&pair.1, intersect.1);
+                            dest_ranges.push(intersect);
 
-                            current_ranges.extend(split[1..].iter());
+                            src_ranges.extend(split[1..].iter());
 
                             found = true;
                             break;
@@ -67,17 +67,17 @@ fn part2(almanac: &Almanac) -> i64 {
                     }
 
                     if !found {
-                        converted_ranges.push(range);
+                        dest_ranges.push(range);
                     }
                 }
-                current_ranges = converted_ranges.clone();
-                converted_ranges.clear();
+                src_ranges = dest_ranges.clone();
+                dest_ranges.clear();
             }
 
-            current_ranges
+            src_ranges
                 .iter()
                 .min_by(|r1, r2| r1.0.cmp(&r2.0))
-                .expect("Converted ranges should have a minimum")
+                .expect("Ranges should have a minimum")
                 .0
         })
         .min()
@@ -156,6 +156,9 @@ impl Range {
         to.0 + (value - self.0)
     }
 
+    /// Splits a range by intersecting it with another.
+    /// Returns the intersection as the first element followed by any leftovers as independent ranges
+    /// Returns None if the ranges do not intercept.
     fn split(&self, by: &Self) -> Option<Vec<Range>> {
         if !self.intercepts(by) {
             return None;
