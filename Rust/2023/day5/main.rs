@@ -73,6 +73,7 @@ fn part2(almanac: &Almanac) -> i64 {
                 current_ranges = converted_ranges.clone();
                 converted_ranges.clear();
             }
+
             current_ranges
                 .iter()
                 .min_by(|r1, r2| r1.0.cmp(&r2.0))
@@ -170,8 +171,12 @@ impl Range {
         }
 
         if first == *by {
-            result.push(Range(self.0, first.0 - 1));
-            result.push(Range(first.1 + 1, self.1));
+            if self.0 < first.0 {
+                result.push(Range(self.0, first.0 - 1));
+            }
+            if self.1 > first.1 {
+                result.push(Range(first.1 + 1, self.1));
+            }
         } else if self.0 < by.0 {
             result.push(Range(self.0, first.0 - 1));
         } else {
