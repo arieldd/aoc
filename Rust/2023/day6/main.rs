@@ -73,12 +73,25 @@ fn count_wins(race: &Race) -> i64 {
     let d = race.time * race.time - 4 * race.record;
     let x1 = (race.time as f64 - f64::sqrt(d as f64)) / 2.0;
     let x2 = (race.time as f64 + f64::sqrt(d as f64)) / 2.0;
-
-    (x2 as i64 - x1 as i64).abs()
+    let mut result = (x2 as i64 - x1 as i64 - 1).abs();
+    //check endpoints
+    if race.can_win(x1 as i64) {
+        result += 1;
+    }
+    if race.can_win(x2 as i64) {
+        result += 1;
+    }
+    result
 }
 
 #[derive(Debug)]
 struct Race {
     time: i64,
     record: i64,
+}
+
+impl Race {
+    fn can_win(&self, x: i64) -> bool {
+        (self.time - x) * x > self.record
+    }
 }
