@@ -1,3 +1,3 @@
 # Advent of Code
 
-Solutions to Advent of Code events, 2022 Python and other years on C++.
+Solutions to Advent of Code events, in C++, Python and lately Rust and Go.
