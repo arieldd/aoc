@@ -1,4 +1,3 @@
-use std::convert::TryInto;
 use std::env;
 use std::fs;
 
@@ -56,16 +55,26 @@ fn parse_races(values: &Vec<Vec<i64>>) -> Vec<Race> {
 }
 
 fn parse_big_race(values: &Vec<Vec<i64>>) -> Race {
-    let mut numbers = values.iter().map(|v| {
-        v.iter().fold(0, |acc, n| {
-            acc * 10_i64.pow(n.to_string().len().try_into().unwrap()) + n
-        })
-    });
+    let mut numbers = values
+        .iter()
+        .map(|v| v.iter().fold(0, |acc, n| acc * 10_i64.pow(digits(*n)) + n));
 
     Race {
         time: numbers.next().expect("Should have built a time"),
         record: numbers.last().expect("Should have built a record"),
     }
+}
+
+fn digits(mut n: i64) -> u32 {
+    let mut digits = 0;
+    loop {
+        n /= 10;
+        digits += 1;
+        if n == 0 {
+            break;
+        }
+    }
+    digits
 }
 
 fn count_wins(race: &Race) -> i64 {
