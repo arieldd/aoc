@@ -24,14 +24,17 @@ int64_t distance(const galaxy_t &g1, const galaxy_t &g2,
   auto min_row = min(g1.r, g2.r), min_column = min(g1.c, g2.c);
 
   int64_t dr = 0;
-  for (auto r = min_row + 1; r < max_row; r++)
-    if (universe.empty_rows.find(r) != universe.empty_rows.end())
+
+  for (auto &r : universe.empty_rows) {
+    if (min_row < r && r < max_row)
       dr += expansion;
+  }
 
   int64_t dc = 0;
-  for (auto c = min_column + 1; c < max_column; c++)
-    if (universe.empty_columns.find(c) != universe.empty_columns.end())
+  for (auto &c : universe.empty_columns) {
+    if (min_column < c && c < max_column)
       dc += expansion;
+  }
 
   return (max_row + dr - min_row) + (max_column + dc - min_column);
 }
