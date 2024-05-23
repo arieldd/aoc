@@ -2,6 +2,7 @@
 #include <unordered_map>
 
 using namespace std;
+using namespace aoc_utils;
 
 struct Record {
   vector<char> springs;
