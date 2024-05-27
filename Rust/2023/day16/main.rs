@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-use std::fmt::Debug;
 use std::fs;
 use std::{env, isize};
 
@@ -18,7 +17,7 @@ fn main() {
     println!("Part 2: {}", solution.1);
 }
 
-fn solve(grid: &[Vec<Tile>]) -> (usize, usize) {
+fn solve(grid: &[Vec<char>]) -> (usize, usize) {
     let mut energized: Vec<usize> = vec![];
     let n = grid.len();
     let m = grid[0].len();
@@ -26,16 +25,21 @@ fn solve(grid: &[Vec<Tile>]) -> (usize, usize) {
     let mut visited: HashSet<Tile> = HashSet::new();
     for i in 0..n {
         visited.clear();
-        follow_beam(&grid[i][0], &grid, &mut visited);
+        follow_beam(
+            &Tile {
+                pos: Point(i as isize, 0),
+                dir: 0,
+            },
+            &grid,
+            &mut visited,
+        );
 
         energized.push(count_unique(&visited));
 
         visited.clear();
-        let back = &grid[i][m - 1];
         follow_beam(
             &Tile {
-                symbol: back.symbol,
-                pos: back.pos.clone(),
+                pos: Point(i as isize, m as isize - 1),
                 dir: 2,
             },
             &grid,
@@ -46,11 +50,9 @@ fn solve(grid: &[Vec<Tile>]) -> (usize, usize) {
 
     for j in 0..m {
         visited.clear();
-        let mut start = &grid[0][j];
         follow_beam(
             &Tile {
-                symbol: start.symbol,
-                pos: start.pos.clone(),
+                pos: Point(0, j as isize),
                 dir: 1,
             },
             &grid,
@@ -60,11 +62,9 @@ fn solve(grid: &[Vec<Tile>]) -> (usize, usize) {
         energized.push(count_unique(&visited));
 
         visited.clear();
-        start = &grid[n - 1][j];
         follow_beam(
             &Tile {
-                symbol: start.symbol,
-                pos: start.pos.clone(),
+                pos: Point(n as isize - 1, j as isize),
                 dir: 3,
             },
             &grid,
@@ -88,80 +88,83 @@ fn count_unique(visited: &HashSet<Tile>) -> usize {
             set.insert(tile.pos.clone());
             set
         })
-        .iter()
-        .count()
+        .len()
 }
 
-fn follow_beam(start: &Tile, grid: &[Vec<Tile>], visited: &mut HashSet<Tile>) {
-    if visited.contains(start) {
-        return;
-    }
-
-    visited.insert(start.clone());
-
+fn follow_beam(start: &Tile, grid: &[Vec<char>], visited: &mut HashSet<Tile>) {
     let n = grid.len() as isize;
     let m = grid[0].len() as isize;
-    let hor = start.dir % 2 == 0;
-    let mut new_dirs = vec![start.dir];
 
-    if start.symbol == '/' {
-        // Reflect "up"
-        new_dirs[0] = match start.dir {
-            0 => 3,
-            1 => 2,
-            2 => 1,
-            3 => 0,
-            x => panic!("Where you going? {}", x),
-        }
-    } else if start.symbol == '\\' {
-        // Reflect "down"
-        new_dirs[0] = match start.dir {
-            0 => 1,
-            1 => 0,
-            2 => 3,
-            3 => 2,
-            x => panic!("Where you going? {}", x),
-        }
-    } else if (start.symbol == '-' && !hor) || (start.symbol == '|' && hor) {
-        // Split the beam
-        match hor {
-            true => {
-                new_dirs[0] = 1;
-                new_dirs.push(3);
-            }
-            false => {
-                new_dirs[0] = 0;
-                new_dirs.push(2);
-            }
-        }
-    }
+    let mut i = start.pos.0;
+    let mut j = start.pos.1;
+    let mut dir = start.dir;
 
-    for d in new_dirs {
-        let ni = start.pos.0 + DY[d];
-        let nj = start.pos.1 + DX[d];
-        if is_valid(ni, nj, n, m) {
-            let next = &grid[ni as usize][nj as usize];
+    while is_valid(i, j, n, m) {
+        let current = &Tile {
+            pos: Point(i as isize, j as isize),
+            dir,
+        };
+
+        if visited.contains(current) {
+            return;
+        }
+        visited.insert(current.clone());
+
+        let hor = dir % 2 == 0;
+        let symbol = grid[i as usize][j as usize];
+
+        if symbol == '/' {
+            // Reflect "up"
+            dir = match dir {
+                0 => 3,
+                1 => 2,
+                2 => 1,
+                3 => 0,
+                x => panic!("Where you going? {}", x),
+            }
+        } else if symbol == '\\' {
+            // Reflect "down"
+            dir = match dir {
+                0 => 1,
+                1 => 0,
+                2 => 3,
+                3 => 2,
+                x => panic!("Where you going? {}", x),
+            }
+        } else if (symbol == '-' && !hor) || (symbol == '|' && hor) {
+            // Split the beam
+            let dir2: usize;
+            match hor {
+                true => {
+                    dir = 1;
+                    dir2 = 3;
+                }
+                false => {
+                    dir = 0;
+                    dir2 = 2;
+                }
+            }
+            let ni = i + DY[dir2];
+            let nj = j + DX[dir2];
             follow_beam(
                 &Tile {
-                    symbol: next.symbol,
-                    pos: next.pos.clone(),
-                    dir: d,
+                    pos: Point(ni, nj),
+                    dir: dir2,
                 },
                 grid,
                 visited,
-            )
+            );
         }
+
+        i += DY[dir];
+        j += DX[dir]
     }
 }
 
-fn read_grid(lines: &[&str]) -> Vec<Vec<Tile>> {
-    lines.iter().enumerate().fold(vec![], |mut grid, (i, l)| {
-        grid.push(l.char_indices().fold(vec![], |mut row, (j, c)| {
-            row.push(Tile {
-                symbol: c,
-                pos: Point(i as isize, j as isize),
-                dir: 0,
-            });
+fn read_grid(lines: &[&str]) -> Vec<Vec<char>> {
+    lines.iter().fold(vec![], |mut grid, l| {
+        grid.push(l.chars().fold(vec![], |mut row, c| {
+            row.push(c);
             row
         }));
         grid
@@ -172,24 +175,10 @@ fn is_valid(i: isize, j: isize, n: isize, m: isize) -> bool {
     i >= 0 && i < n && j >= 0 && j < m
 }
 
-fn _print_grid(grid: &[Vec<Tile>]) {
-    grid.iter().for_each(|row| {
-        row.iter().for_each(|e| print!("{:?}", e));
-        println!()
-    });
-}
-
 #[derive(Eq, Hash, PartialEq, Clone)]
 struct Tile {
-    symbol: char,
     pos: Point,
     dir: usize,
-}
-
-impl Debug for Tile {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{}", self.symbol))
-    }
 }
 
 #[derive(Eq, Hash, PartialEq, Clone)]
