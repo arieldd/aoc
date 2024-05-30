@@ -114,7 +114,7 @@ pub mod grid {
     }
 
     #[derive(Debug, PartialEq, Eq, Hash)]
-    pub struct Point(isize, isize);
+    pub struct Point(pub isize, pub isize);
 
     impl Point {
         pub fn new(i: usize, j: usize) -> Self {
