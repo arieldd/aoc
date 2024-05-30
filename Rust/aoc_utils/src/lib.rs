@@ -1,5 +1,10 @@
 pub mod grid {
 
+    pub const DX4: [isize; 4] = [1, 0, -1, 0];
+    pub const DY4: [isize; 4] = [0, 1, 0, -1];
+    pub const DX8: [isize; 8] = [1, 1, 0, -1, -1, -1, 0, 1];
+    pub const DY8: [isize; 8] = [0, 1, 1, 1, 0, -1, -1, -1];
+
     #[derive(Debug)]
     pub struct Grid<T> {
         contents: Vec<T>,
@@ -7,15 +12,22 @@ pub mod grid {
         pub height: usize,
     }
 
-    impl<T: From<char>> Grid<T> {
+    pub trait FromCharElem {
+        fn new(c: char, row: usize, column: usize) -> Self;
+    }
+
+    impl<T: FromCharElem> Grid<T> {
         pub fn from_lines(lines: &[&str]) -> Self {
             Grid {
-                contents: lines.iter().fold(vec![], |mut contents, row| {
-                    row.chars().for_each(|c| {
-                        contents.push(T::from(c));
-                    });
-                    contents
-                }),
+                contents: lines
+                    .iter()
+                    .enumerate()
+                    .fold(vec![], |mut contents, (i, row)| {
+                        row.char_indices().for_each(|(j, c)| {
+                            contents.push(T::new(c, i, j));
+                        });
+                        contents
+                    }),
                 height: lines.len(),
                 width: lines[0].len(),
             }
@@ -35,6 +47,14 @@ pub mod grid {
             let index = i * self.width + j;
             if index < self.contents.len() {
                 Some(&self.contents[index])
+            } else {
+                None
+            }
+        }
+
+        pub fn get(&self, i: isize, j: isize) -> Option<&T> {
+            if i >= 0 && j >= 0 {
+                self.at(i as usize, j as usize)
             } else {
                 None
             }
