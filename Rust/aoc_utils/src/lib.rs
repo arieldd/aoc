@@ -1,36 +1,95 @@
 pub mod grid {
-    use std::collections::HashMap;
 
     #[derive(Debug)]
     pub struct Grid<T> {
-        contents: HashMap<Point, T>,
-        width: usize,
-        height: usize,
+        contents: Vec<T>,
+        pub width: usize,
+        pub height: usize,
     }
 
     impl<T: From<char>> Grid<T> {
         pub fn from_lines(lines: &[&str]) -> Self {
             Grid {
-                contents: lines.iter().enumerate().fold(
-                    HashMap::new(),
-                    |mut contents, (i, row)| {
-                        row.char_indices().for_each(|(j, c)| {
-                            contents.insert(Point::new(i, j), T::from(c));
-                        });
-                        contents
-                    },
-                ),
+                contents: lines.iter().fold(vec![], |mut contents, row| {
+                    row.chars().for_each(|c| {
+                        contents.push(T::from(c));
+                    });
+                    contents
+                }),
                 height: lines.len(),
                 width: lines[0].len(),
             }
         }
     }
 
-    impl<'a, T> Iterator for Grid<T> {
+    impl<T> Grid<T> {
+        pub fn new() -> Self {
+            Grid {
+                contents: vec![],
+                width: 0,
+                height: 0,
+            }
+        }
+
+        pub fn at(&self, i: usize, j: usize) -> Option<&T> {
+            let index = i * self.width + j;
+            if index < self.contents.len() {
+                Some(&self.contents[index])
+            } else {
+                None
+            }
+        }
+
+        pub fn iter(&self) -> GridIterator<T> {
+            GridIterator {
+                grid: self,
+                index: 0,
+            }
+        }
+    }
+
+    impl<T> IntoIterator for Grid<T> {
+        type Item = T;
+
+        type IntoIter = GridIntoIterator<T>;
+
+        fn into_iter(self) -> Self::IntoIter {
+            GridIntoIterator { grid: self }
+        }
+    }
+
+    pub struct GridIterator<'a, T> {
+        grid: &'a Grid<T>,
+        index: usize,
+    }
+
+    impl<'a, T> Iterator for GridIterator<'a, T> {
+        type Item = &'a T;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.index < self.grid.contents.len() {
+                let next = Some(&self.grid.contents[self.index]);
+                self.index += 1;
+                next
+            } else {
+                None
+            }
+        }
+    }
+
+    pub struct GridIntoIterator<T> {
+        grid: Grid<T>,
+    }
+
+    impl<T> Iterator for GridIntoIterator<T> {
         type Item = T;
 
         fn next(&mut self) -> Option<Self::Item> {
-            todo!()
+            if self.grid.contents.len() == 0 {
+                None
+            } else {
+                Some(self.grid.contents.remove(0))
+            }
         }
     }
 
