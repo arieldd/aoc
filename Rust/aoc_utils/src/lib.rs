@@ -1,4 +1,5 @@
 pub mod grid {
+    use std::ops;
 
     pub const DX4: [isize; 4] = [1, 0, -1, 0];
     pub const DY4: [isize; 4] = [0, 1, 0, -1];
@@ -119,6 +120,14 @@ pub mod grid {
     impl Point {
         pub fn new(i: usize, j: usize) -> Self {
             Point(i as isize, j as isize)
+        }
+    }
+
+    impl ops::Add<Point> for Point {
+        type Output = Point;
+
+        fn add(self, rhs: Point) -> Self::Output {
+            Point(self.0 + rhs.0, self.1 + rhs.1)
         }
     }
 
