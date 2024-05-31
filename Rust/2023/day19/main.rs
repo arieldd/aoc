@@ -14,14 +14,14 @@ fn main() {
     let (workflows, parts) = parse_input(&lines);
 
     println!("Part 1: {}", part1(&workflows, &parts));
-    println!("Part 2: {}", part2(&lines));
+    println!("Part 2: {}", part2(&workflows));
 }
 
 fn part1(workflows: &HashMap<&str, Vec<Rule>>, parts: &Vec<Part>) -> u32 {
     parts
         .iter()
         .map(|p| {
-            if proccess_part(workflows, p) {
+            if is_part_accepted(workflows, p) {
                 p.iter().sum()
             } else {
                 0
@@ -30,8 +30,15 @@ fn part1(workflows: &HashMap<&str, Vec<Rule>>, parts: &Vec<Part>) -> u32 {
         .sum()
 }
 
-fn part2(_lines: &[&str]) -> u32 {
-    0
+fn part2(workflows: &HashMap<&str, Vec<Rule>>) -> u64 {
+    count_accepted_parts(
+        "in",
+        workflows,
+        Range {
+            lower: [0; 4],
+            upper: [4001; 4],
+        },
+    )
 }
 
 fn parse_input<'a>(lines: &'a [&str]) -> (HashMap<&'a str, Vec<Rule>>, Vec<Part>) {
@@ -73,7 +80,7 @@ fn parse_input<'a>(lines: &'a [&str]) -> (HashMap<&'a str, Vec<Rule>>, Vec<Part>
     (workflows, parts)
 }
 
-fn proccess_part(workflows: &HashMap<&str, Vec<Rule>>, p: &Part) -> bool {
+fn is_part_accepted(workflows: &HashMap<&str, Vec<Rule>>, p: &Part) -> bool {
     let mut current = "in";
     while let Some(rules) = workflows.get(current) {
         for r in rules.iter() {
@@ -90,6 +97,43 @@ fn proccess_part(workflows: &HashMap<&str, Vec<Rule>>, p: &Part) -> bool {
         }
     }
     false
+}
+
+fn count_accepted_parts(
+    current: &str,
+    workflows: &HashMap<&str, Vec<Rule>>,
+    mut bounds: Range,
+) -> u64 {
+    match current {
+        "A" => distinct_parts_in_range(&bounds),
+        "R" => 0,
+        _ => {
+            let mut total = 0;
+            if let Some(rules) = workflows.get(current) {
+                for r in rules {
+                    match r.split_range(&bounds) {
+                        (Some(matched), remaining) => {
+                            match remaining {
+                                Some(range) => bounds = range,
+                                None => (),
+                            };
+
+                            total += count_accepted_parts(&r.dest, workflows, matched);
+                        }
+                        _ => (),
+                    }
+                }
+            }
+            total
+        }
+    }
+}
+
+fn distinct_parts_in_range(r: &Range) -> u64 {
+    r.upper
+        .iter()
+        .zip(r.lower)
+        .fold(1, |acc, (u, l)| acc * (u - l - 1) as u64)
 }
 
 type Part = [u32; 4];
@@ -147,4 +191,39 @@ impl Rule {
             p[self.pindex].cmp(&self.value) == self.relation
         }
     }
+
+    fn split_range(&self, r: &Range) -> (Option<Range>, Option<Range>) {
+        let mut matched = Range {
+            lower: r.lower,
+            upper: r.upper,
+        };
+        let mut remaining = matched;
+        match self.relation {
+            Ordering::Less => {
+                if self.value >= r.upper[self.pindex] {
+                    return (None, None);
+                } else {
+                    matched.upper[self.pindex] = self.value;
+                    remaining.lower[self.pindex] = self.value - 1;
+                }
+            }
+            Ordering::Greater => {
+                if self.value <= matched.lower[self.pindex] {
+                    return (None, None);
+                } else {
+                    matched.lower[self.pindex] = self.value;
+                    remaining.upper[self.pindex] = self.value + 1;
+                }
+            }
+            Ordering::Equal => return (Some(matched), None),
+        };
+
+        (Some(matched), Some(remaining))
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+struct Range {
+    lower: Part,
+    upper: Part,
 }
