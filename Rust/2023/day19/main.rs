@@ -110,17 +110,14 @@ fn count_accepted_parts(
         _ => {
             let mut total = 0;
             if let Some(rules) = workflows.get(current) {
-                for r in rules {
-                    match r.split_range(&bounds) {
-                        (Some(matched), remaining) => {
-                            match remaining {
-                                Some(range) => bounds = range,
-                                None => (),
-                            };
+                for r in rules.iter() {
+                    if let (Some(matched), remaining) = r.split_range(&bounds) {
+                        total += count_accepted_parts(&r.dest, workflows, matched);
 
-                            total += count_accepted_parts(&r.dest, workflows, matched);
-                        }
-                        _ => (),
+                        match remaining {
+                            Some(range) => bounds = range,
+                            None => break,
+                        };
                     }
                 }
             }
