@@ -1,6 +1,7 @@
 #include "utils.h"
 
 using namespace std;
+using namespace aoc_utils;
 
 enum ModuleType { Broadcaster, FlipFlop, Conjunction };
 
@@ -21,7 +22,7 @@ struct Module {
   int process_pulse(map<string, Module> &network) {
 
     if (pulses.empty())
-      return;
+      return 0;
     // println("Processing queue with size ", pulses.size(), " on ", label);
 
     auto pulse = pulses.front();
@@ -271,7 +272,14 @@ int main(int argc, char *argv[]) {
       {"db", 3},
   };
 
-  auto r2 = part2(network, terminators);
+  map<string, int> terminators3{
+      {"ph", 0},
+      {"vn", 1},
+      {"kt", 2},
+      {"hn", 3},
+  };
+
+  auto r2 = part2(network, terminators3);
   println("Part 2: ", r2);
 
   return 0;
