@@ -15,10 +15,10 @@ fn main() {
     let modules = parse_input(&lines);
 
     println!("Part 1: {}", part1(modules.clone()));
-
-    if args.len() > 2 {
-        println!("Part 2: {}", part2(modules.clone(), &args[2..]));
-    }
+    println!(
+        "Part 2: {}",
+        part2(modules.clone(), &find_terminators(&modules))
+    );
 }
 
 fn part1(mut modules: HashMap<String, Module>) -> usize {
@@ -55,7 +55,7 @@ fn part1(mut modules: HashMap<String, Module>) -> usize {
     lows * highs
 }
 
-fn part2(mut modules: HashMap<String, Module>, last_modules: &[String]) -> i64 {
+fn part2(mut modules: HashMap<String, Module>, last_modules: &[&String]) -> i64 {
     let mut processing = VecDeque::new();
 
     let mut rounds = vec![-1; last_modules.len()];
@@ -73,8 +73,8 @@ fn part2(mut modules: HashMap<String, Module>, last_modules: &[String]) -> i64 {
                         processing.push_back((name.clone(), value, label.clone()));
                     });
 
-                    if value && last_modules.contains(&label) {
-                        let index = last_modules.iter().position(|p| *p == label).unwrap();
+                    if value && last_modules.contains(&&label) {
+                        let index = last_modules.iter().position(|p| **p == label).unwrap();
                         if rounds[index] == -1 {
                             rounds[index] = i + 1;
                         }
@@ -91,6 +91,17 @@ fn part2(mut modules: HashMap<String, Module>, last_modules: &[String]) -> i64 {
 
         i += 1;
     }
+}
+
+fn find_terminators(modules: &HashMap<String, Module>) -> Vec<&String> {
+    modules
+        .iter()
+        .find(|(_, m)| m.relays.contains(&"rx".to_string()))
+        .expect("One module should send to 'rx'")
+        .1
+        .memory
+        .keys()
+        .collect()
 }
 
 fn _print_modules(modules: &HashMap<String, Module>) {
