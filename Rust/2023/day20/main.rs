@@ -8,14 +8,17 @@ fn main() {
     if args.len() < 2 {
         panic!("Please provide an input file.")
     }
+
     let input = fs::read_to_string(&args[1]).expect("Should be able to read input file");
     let lines = input.lines().collect::<Vec<_>>();
 
     let modules = parse_input(&lines);
 
-    // print_modules(&modules);
     println!("Part 1: {}", part1(modules.clone()));
-    println!("Part 2: {}", part2(&modules));
+
+    if args.len() > 2 {
+        println!("Part 2: {}", part2(modules.clone(), &args[2..]));
+    }
 }
 
 fn part1(mut modules: HashMap<String, Module>) -> usize {
@@ -26,7 +29,7 @@ fn part1(mut modules: HashMap<String, Module>) -> usize {
 
     let mut processing = VecDeque::new();
 
-    for i in 0..presses {
+    for _ in 0..presses {
         lows += 1;
         processing.push_back((bc_name.to_string(), false, "button".to_string()));
 
@@ -52,11 +55,45 @@ fn part1(mut modules: HashMap<String, Module>) -> usize {
     lows * highs
 }
 
-fn part2(_modules: &HashMap<String, Module>) -> u32 {
-    0
+fn part2(mut modules: HashMap<String, Module>, last_modules: &[String]) -> i64 {
+    let mut processing = VecDeque::new();
+
+    let mut rounds = vec![-1; last_modules.len()];
+
+    let mut i = 0;
+    loop {
+        processing.push_back(("broadcaster".to_string(), false, "button".to_string()));
+
+        while let Some((label, pulse, sender)) = processing.pop_front() {
+            modules.entry(label.to_string()).and_modify(|m| {
+                m.recv(pulse, &sender);
+
+                if let Some(value) = m.process() {
+                    m.relays.iter().for_each(|name| {
+                        processing.push_back((name.clone(), value, label.clone()));
+                    });
+
+                    if value && last_modules.contains(&label) {
+                        let index = last_modules.iter().position(|p| *p == label).unwrap();
+                        if rounds[index] == -1 {
+                            rounds[index] = i + 1;
+                        }
+                    }
+                }
+            });
+        }
+
+        if rounds.iter().all(|v| *v != -1) {
+            return rounds
+                .iter()
+                .fold(1, |acc, e| num::integer::lcm::<i64>(acc, *e));
+        }
+
+        i += 1;
+    }
 }
 
-fn print_modules(modules: &HashMap<String, Module>) {
+fn _print_modules(modules: &HashMap<String, Module>) {
     modules.iter().for_each(|(label, module)| {
         print!("{} -> ", label);
         module.relays.iter().for_each(|name| {
