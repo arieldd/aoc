@@ -7,3 +7,6 @@
 target/
 *.lock
 main
+solution
+*.o
+*.toml
