@@ -1,6 +1,7 @@
 #include "utils.h"
 
 using namespace std;
+using namespace aoc_utils;
 
 const map<string, int> numbers = {{"one", 1},   {"two", 2},   {"three", 3},
                                   {"four", 4},  {"five", 5},  {"six", 6},
