@@ -87,28 +87,29 @@ fn parse_input(allocator: *const Allocator, lines: [][]const u8) ![]ListEntry {
 }
 
 fn read_lines(allocator: *const Allocator, filename: []const u8) ![][]const u8 {
-    const file = try std.fs.cwd().openFile(filename, .{});
+    const file = try std.fs.cwd().openFile(filename, .{ .mode = .read_only });
     defer file.close();
 
     const file_size = (try file.stat()).size;
     const input = try file.readToEndAlloc(allocator.*, file_size);
 
-    var line_count: usize = 0;
-    for (input) |c| {
-        if (c == '\n') {
-            line_count += 1;
-        }
-    }
+    const initial_lines = 100;
+    var lines: [][]const u8 = try allocator.alloc([]u8, initial_lines);
 
-    var lines: [][]const u8 = try allocator.alloc([]u8, line_count);
-    errdefer allocator.free(lines);
-
-    var iter = split(u8, input, "\n");
+    var iter = std.mem.splitScalar(u8, input, '\n');
 
     var i: usize = 0;
     while (iter.next()) |line| : (i += 1) {
         if (line.len == 0) break;
+
+        if (i == lines.len) {
+            lines = try allocator.realloc(lines, lines.len + initial_lines);
+        }
         lines[i] = line;
+    }
+
+    if (i < lines.len) {
+        lines = try allocator.realloc(lines, i);
     }
 
     return lines;

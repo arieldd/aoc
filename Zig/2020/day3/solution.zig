@@ -66,21 +66,23 @@ fn read_lines(allocator: *const Allocator, filename: []const u8) ![][]const u8 {
     const file_size = (try file.stat()).size;
     const input = try file.readToEndAlloc(allocator.*, file_size);
 
-    var line_count: usize = 0;
-    for (input) |c| {
-        if (c == '\n') {
-            line_count += 1;
-        }
-    }
-
-    var lines: [][]const u8 = try allocator.alloc([]u8, line_count);
+    const initial_lines = 100;
+    var lines: [][]const u8 = try allocator.alloc([]u8, initial_lines);
 
     var iter = split(u8, input, "\n");
 
     var i: usize = 0;
     while (iter.next()) |line| : (i += 1) {
         if (line.len == 0) break;
+
+        if (i == lines.len) {
+            lines = try allocator.realloc(lines, lines.len + initial_lines);
+        }
         lines[i] = line;
+    }
+
+    if (i < lines.len) {
+        lines = try allocator.realloc(lines, i);
     }
 
     return lines;
