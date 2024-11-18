@@ -16,6 +16,7 @@ pub fn main() !void {
 fn part1(lines: [][]const u8, target: u32) !u32 {
     for (lines, 0..) |line_1, i| {
         const v1 = try std.fmt.parseInt(u32, line_1, 10);
+        if (v1 > target) continue;
         for (lines[i + 1 ..]) |line_2| {
             const v2 = try std.fmt.parseInt(u32, line_2, 10);
             if (v1 + v2 == target)
@@ -28,8 +29,11 @@ fn part1(lines: [][]const u8, target: u32) !u32 {
 fn part2(lines: [][]const u8, target: u32) !u32 {
     for (lines, 0..) |line_1, i| {
         const v1 = try std.fmt.parseInt(u32, line_1, 10);
+        if (v1 > target) continue;
         for (lines[i + 1 ..]) |line_2| {
             const v2 = try std.fmt.parseInt(u32, line_2, 10);
+            if (v1 + v2 > target) continue;
+
             for (lines[i + 2 ..]) |line_3| {
                 const v3 = try std.fmt.parseInt(u32, line_3, 10);
                 if (v1 + v2 + v3 == target)
