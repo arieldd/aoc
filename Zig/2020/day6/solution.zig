@@ -8,7 +8,10 @@ pub fn main() !void {
     defer arena.deinit();
     const allocator = arena.allocator();
 
-    const lines = try read_lines(&allocator, "input.txt");
+    const args = try std.process.argsAlloc(allocator);
+    std.debug.assert(args.len > 1);
+
+    const lines = try read_lines(&allocator, args[1]);
 
     std.debug.print("Part 1: {!}\n", .{part1(&allocator, lines.items)});
     std.debug.print("Part 2: {!}\n", .{part2(&allocator, lines.items)});
