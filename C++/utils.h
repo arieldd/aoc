@@ -11,9 +11,8 @@
 #include <string>
 #include <vector>
 
-
 namespace aoc_utils {
-std::vector<std::string> parse_input(const std::string &file_name) {
+inline std::vector<std::string> parse_input(const std::string &file_name) {
   std::vector<std::string> ret;
 
   std::ifstream fs(file_name);
@@ -32,7 +31,7 @@ template <typename... Args> void print(Args &&...args) {
 template <typename... Args> void println(Args &&...args) {
   print(std::forward<Args>(args)...);
 
-  std::cout << std::endl;
+  std::cout << '\n';
 }
 #pragma endregion
 
@@ -71,7 +70,7 @@ std::vector<std::string> split(const std::string &str, char delim) {
 
 #pragma region Grid utils
 
-bool is_valid_pos(int i, int j, int r, int c) {
+inline bool is_valid_pos(int i, int j, int r, int c) {
   return i >= 0 && j >= 0 && i < r && j < c;
 }
 
@@ -83,7 +82,7 @@ const std::vector<int> dy{0, 1, 1, 1, 0, -1, -1, -1},
 
 #pragma region Math
 
-unsigned modulo(int value, unsigned m) {
+inline unsigned modulo(int value, unsigned m) {
   int mod = value % (int)m;
   if (mod < 0) {
     mod += m;
