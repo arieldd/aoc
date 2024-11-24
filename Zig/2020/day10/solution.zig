@@ -13,22 +13,22 @@ pub fn main() !void {
     const numbers = try read_lines(&allocator, args[1]);
 
     std.debug.print("Part 1: {}\n", .{part1(&numbers)});
-    std.debug.print("Part 2: {}\n", .{part2(numbers.items)});
+    std.debug.print("Part 2: {}\n", .{part2(&numbers)});
 }
 
 fn part1(numbers: *const ArrayList(i64)) u64 {
-    const sorted = numbers.clone() catch return 0;
-    std.mem.sort(i64, sorted.items, {}, comptime std.sort.asc(i64));
+    const devices = numbers.clone() catch return 0;
+    std.mem.sort(i64, devices.items, {}, comptime std.sort.asc(i64));
     var ones: u64 = 0;
     var threes: u64 = 1;
 
-    if (sorted.items[0] == 1) ones += 1;
-    if (sorted.items[0] == 3) ones += 3;
+    if (devices.items[0] == 1) ones += 1;
+    if (devices.items[0] == 3) ones += 3;
 
     var i: usize = 1;
-    while (i < sorted.items.len) : (i += 1) {
-        const jolt = sorted.items[i];
-        const prev_jolt = sorted.items[i - 1];
+    while (i < devices.items.len) : (i += 1) {
+        const jolt = devices.items[i];
+        const prev_jolt = devices.items[i - 1];
         if (jolt - prev_jolt == 1) ones += 1;
         if (jolt - prev_jolt == 3) threes += 1;
     }
@@ -36,8 +36,43 @@ fn part1(numbers: *const ArrayList(i64)) u64 {
     return ones * threes;
 }
 
-fn part2(_: []i64) u32 {
-    return 0;
+fn part2(numbers: *const ArrayList(i64)) i64 {
+    const devices = numbers.clone() catch return 0;
+    std.mem.sort(i64, devices.items, {}, comptime std.sort.asc(i64));
+
+    var dp: std.AutoHashMap(i64, i64) = std.AutoHashMap(i64, i64).init(devices.allocator);
+    return count_arrangements(&devices, 0, devices.items[devices.items.len - 1] + 3, &dp);
+}
+
+fn count_arrangements(devices: *const ArrayList(i64), joltage: i64, max_joltage: i64, dp: *std.AutoHashMap(i64, i64)) i64 {
+    if (dp.contains(joltage))
+        return dp.get(joltage).?;
+
+    var result: i64 = 0;
+    const usable: ArrayList(i64) = get_usable_devices(&devices.allocator, devices.items, joltage);
+
+    if (usable.items.len == 0) return if (max_joltage - joltage <= 3) 1 else 0;
+
+    for (usable.items) |device| {
+        result += count_arrangements(devices, device, max_joltage, dp);
+    }
+
+    dp.put(joltage, result) catch return 0;
+    return result;
+}
+
+fn get_usable_devices(allocator: *const Allocator, devices: []const i64, joltage: i64) ArrayList(i64) {
+    var result: ArrayList(i64) = ArrayList(i64).init(allocator.*);
+
+    var i: usize = 0;
+    while (i < devices.len) : (i += 1) {
+        if (devices[i] <= joltage) continue;
+        if (devices[i] - joltage <= 3) {
+            result.append(devices[i]) catch break;
+        } else break;
+    }
+
+    return result;
 }
 
 fn read_lines(allocator: *const Allocator, filename: []const u8) !ArrayList(i64) {
