@@ -3,13 +3,12 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 using namespace std;
-
-#define ll long long
 #define umap unordered_map
 
 struct Locations {
@@ -19,10 +18,12 @@ struct Locations {
 
 Locations read_locations(const vector<string> &lines) {
   Locations result;
+  int v1, v2;
   for (auto const &line : lines) {
-    auto sep = line.find("   ");
-    result.l1.push_back(stoi(line.substr(0, sep)));
-    result.l2.push_back(stoi(line.substr(sep + 3, line.size())));
+    stringstream ss(line);
+    ss >> v1 >> v2;
+    result.l1.push_back(v1);
+    result.l2.push_back(v2);
   }
   sort(result.l1.begin(), result.l1.end());
   sort(result.l2.begin(), result.l2.end());
