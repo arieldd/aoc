@@ -1,15 +1,14 @@
-#include "utils.h"
 #include <cassert>
+#include <fstream>
+#include <iostream>
 #include <numeric>
+#include <regex>
 #include <sstream>
+#include <string>
+#include <vector>
 using namespace std;
-using namespace aoc_utils;
 
-struct Mul {
-  int value;
-  unsigned long start_pos;
-  unsigned long end_pos;
-};
+#define pint pair<int, int>
 
 vector<string> read_input(const string &filename) {
   vector<string> lines{};
@@ -20,6 +19,94 @@ vector<string> read_input(const string &filename) {
     lines.push_back(line);
   return lines;
 }
+
+int part1_regex(const vector<string> &lines) {
+  regex pattern("mul\\(([0-9]+),([0-9]+)\\)");
+  auto end = sregex_iterator();
+
+  int result = 0;
+  for (auto &line : lines) {
+    auto iter = sregex_iterator(line.begin(), line.end(), pattern);
+    for (auto it = iter; it != end; it++) {
+      smatch match = *it;
+      int v1 = stoi(match[1]), v2 = stoi(match[2]);
+      result += v1 * v2;
+    }
+  }
+  return result;
+}
+
+int part2_regex(const vector<string> &lines) {
+  regex mult_pattern("mul\\(([0-9]+),([0-9]+)\\)");
+  regex change_pattern("do\\(\\)|don't\\(\\)");
+  auto end = sregex_iterator();
+
+  int result = 0;
+  bool state = true;
+  for (auto &line : lines) {
+    vector<pint> values;
+    vector<int> changes;
+
+    auto m_matches = sregex_iterator(line.begin(), line.end(), mult_pattern);
+    for (auto it = m_matches; it != end; it++) {
+      smatch match = *it;
+      int v1 = stoi(match[1]), v2 = stoi(match[2]);
+      values.push_back({v1 * v2, match.position()});
+    }
+
+    bool line_state = state;
+    auto c_matches = sregex_iterator(line.begin(), line.end(), change_pattern);
+    for (auto it = c_matches; it != end; it++) {
+      smatch match = *it;
+      if (match.str() == "do()" and line_state)
+        continue;
+
+      if (match.str() == "don't()" and !line_state)
+        continue;
+
+      line_state = !line_state;
+
+      changes.push_back(match.position());
+    }
+
+    int mi = 0, ci = 0;
+    for (; mi < values.size() and ci < changes.size();) {
+      if (values[mi].second < changes[ci]) {
+        if (state)
+          result += values[mi].first;
+        mi++;
+      } else {
+        state = !state;
+        ci++;
+      }
+    }
+    if (state) {
+      for (; mi < values.size(); mi++) {
+
+        result += values[mi].first;
+      }
+    }
+  }
+  return result;
+}
+
+int main(int argc, char *argv[]) {
+  assert(argc > 1 && "Need some input brotha\n");
+  auto lines = read_input(argv[1]);
+
+  auto p1_regex = part1_regex(lines);
+  auto p2_regex = part2_regex(lines);
+  cout << "Part 1: " << p1_regex << '\n';
+  cout << "Part 2: " << p2_regex << '\n';
+  return 0;
+}
+
+/* Original solution with manual parsing
+struct Mul {
+  int value;
+  unsigned long start_pos;
+  unsigned long end_pos;
+};
 
 int to_decimal(vector<char> number) {
 
@@ -146,20 +233,4 @@ int part2(const vector<string> &lines, const vector<vector<Mul>> mults) {
     }
   }
   return result;
-}
-
-int main(int argc, char *argv[]) {
-  assert(argc > 1 && "Need some input brotha\n");
-  auto lines = read_input(argv[1]);
-  auto mults = part1(lines);
-  auto p1 = accumulate(mults.begin(), mults.end(), 0,
-                       [](auto acc, const vector<Mul> &row) {
-                         return acc + accumulate(row.begin(), row.end(), 0,
-                                                 [](auto sum, const Mul &mult) {
-                                                   return sum + mult.value;
-                                                 });
-                       });
-  cout << "Part 1: " << p1 << '\n';
-  cout << "Part 2: " << part2(lines, mults) << '\n';
-  return 0;
-}
+} */
