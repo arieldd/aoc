@@ -59,8 +59,7 @@ set<pair<int, int>> part1(const Lab &input) {
 
 bool in_a_loop(Lab &explore) {
   int n = explore.map.size(), m = explore.map[0].size();
-  set<tuple<int, int, int>> visited;
-  for (;;) {
+  for (int rounds = 0; rounds < n * m; rounds++) {
     auto ni = explore.guard.first + dy[explore.dir];
     auto nj = explore.guard.second + dx[explore.dir];
     if (!is_valid_pos(ni, nj, n, m))
@@ -68,15 +67,11 @@ bool in_a_loop(Lab &explore) {
     if (explore.map[ni][nj] == '#')
       explore.dir = (explore.dir + 2) % 8;
     else {
-      tuple<int, int, int> next = {ni, nj, explore.dir};
-      if (visited.contains(next))
-        return true;
-      visited.insert(next);
       explore.guard = {ni, nj};
     }
   }
 
-  return false;
+  return true;
 }
 
 int part2(const Lab &input, const set<pair<int, int>> &path) {
