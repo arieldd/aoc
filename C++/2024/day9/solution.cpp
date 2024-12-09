@@ -6,119 +6,92 @@ using namespace std;
 
 #define ll long long
 
-vector<string> read_input(const string &filename) {
-  vector<string> lines{};
-  ifstream fs(filename);
+struct Block {
+  int file_id = -1, space, start;
+};
 
-  string line;
-  while (getline(fs, line))
-    lines.push_back(line);
-  return lines;
+ll checksum(const vector<int> &filesystem) {
+  ll checksum = 0;
+  for (int i = 0; i < filesystem.size(); i++) {
+    if (filesystem[i] == -1)
+      continue; // compatible with part 2, 'break' for part 1 only
+
+    checksum += filesystem[i] * i;
+  }
+  return checksum;
 }
 
-int part1(const vector<string> &lines) { return 0; }
+ll part1(vector<int> filesystem) {
+  for (int r = 0, l = filesystem.size() - 1; r <= l; r++) {
+    while (filesystem[l] == -1 and r <= l)
+      l--;
+    if (r > l)
+      break;
+    if (filesystem[r] == -1) {
+      filesystem[r] = filesystem[l];
+      filesystem[l] = -1;
+    }
+  }
 
-int part2(const vector<string> &lines) { return 0; }
+  return checksum(filesystem);
+}
+
+ll part2(vector<int> filesystem, vector<Block> full, vector<Block> empty) {
+  for (int e = 0; e < empty.size();) {
+    int f = full.size() - 1;
+    while (f > 0 and empty[e].space < full[f].space)
+      f--;
+
+    if (f <= 0 or empty[e].start > full[f].start) {
+      e++;
+      continue;
+    }
+
+    for (auto index = 0; index < full[f].space; index++) {
+      filesystem[empty[e].start + index] = full[f].file_id;
+      filesystem[full[f].start + index] = -1;
+    }
+
+    empty[e].start += full[f].space;
+    empty[e].space -= full[f].space;
+    full.erase(full.begin() + f);
+  }
+
+  return checksum(filesystem);
+}
 
 int main(int argc, char *argv[]) {
   assert(argc > 1 && "Need some input brotha\n");
 
-  vector<int> blocks{};
   ifstream fs(argv[1]);
-
-  string line;
-  getline(fs, line);
+  string input;
+  getline(fs, input);
 
   int file_id = 0;
-  vector<vector<int>> full{};
-  vector<vector<int>> empty{};
-  for (int i = 0; i < line.size(); i++) {
-    auto value = line[i] - '0';
+  vector<int> filesystem{};
+  vector<Block> full{}, empty{};
+
+  for (int i = 0; i < input.size(); i++) {
+    auto value = input[i] - '0';
     for (auto j = 0; j < value; j++) {
       if (i % 2)
-        blocks.push_back(-1);
+        filesystem.push_back(-1);
       else {
-        blocks.push_back(file_id);
+        filesystem.push_back(file_id);
       }
     }
 
+    int block_start = (int)filesystem.size() - value;
     if (i % 2) {
-      empty.push_back({value, file_id, (int)blocks.size() - value});
+      empty.push_back({.space = value, .start = block_start});
     } else {
-      full.push_back({value, file_id, (int)blocks.size() - value});
+      full.push_back(
+          {.file_id = file_id, .space = value, .start = block_start});
       file_id++;
     }
   }
 
-  auto defrag = [](vector<int> &blocks) {
-    for (int r = 0, l = blocks.size() - 1; r <= l; r++) {
-      while (blocks[l] == -1 and r <= l)
-        l--;
-      if (r > l)
-        break;
-      if (blocks[r] == -1) {
-        blocks[r] = blocks[l];
-        blocks[l] = -1;
-      }
-    }
-  };
-
-  auto print_blocks = [](vector<int> blocks) {
-    for (int i = 0; i < blocks.size(); i++) {
-      if (blocks[i] >= 0)
-        cout << blocks[i] << ' ';
-      else
-        cout << '.';
-    }
-    cout << '\n';
-  };
-
-  auto first = blocks;
-
-  defrag(first);
-
-  ll part1 = 0;
-  for (int i = 0; i < first.size(); i++) {
-    if (first[i] == -1)
-      break;
-    part1 += first[i] * i;
-  }
-  cout << "Part 1: " << part1 << '\n';
-
-  auto defrag2 = [&](vector<int> &blocks) {
-    int n = full.size(), m = empty.size();
-    for (int e = 0; e < m;) {
-      int f = full.size() - 1;
-      while (f > 0 and empty[e][0] < full[f][0])
-        f--;
-
-      if (f <= 0 or empty[e][2] > full[f][2]) {
-        e++;
-        continue;
-      }
-
-      for (auto index = 0; index < full[f][0]; index++) {
-        blocks[empty[e][2] + index] = full[f][1];
-        blocks[full[f][2] + index] = -1;
-      }
-
-      empty[e][2] += full[f][0];
-      empty[e][0] -= full[f][0];
-      full.erase(full.begin() + f);
-    }
-  };
-
-  auto second = blocks;
-  defrag2(second);
-
-  // print_blocks(second);
-
-  ll part2 = 0;
-  for (int i = 0; i < second.size(); i++) {
-    if (second[i] == -1)
-      continue;
-    part2 += second[i] * i;
-  }
-  cout << "Part 2: " << part2 << '\n';
+  cout << "Part 1: " << part1(filesystem) << '\n';
+  cout << "Part 2: " << part2(filesystem, full, empty) << '\n';
   return 0;
 }
