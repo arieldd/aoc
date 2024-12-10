@@ -29,36 +29,33 @@ Map read_input(const string &filename) {
   return result;
 }
 
+const vector<pair<int, int>> adj4 = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
+
 inline bool is_valid_pos(int i, int j, int r, int c) {
   return i >= 0 && j >= 0 && i < r && j < c;
 }
 
-// Start from the right clockwise
-const std::vector<int> /**/
-    dy{0, 1, 1, 1, 0, -1, -1, -1}, dx{1, 1, 0, -1, -1, -1, 0, 1};
-
-int explore(const Map &map, int i, int j, vector<bool> &visited,
-            bool count_trails) {
+int dfs(const Map &map, int i, int j, vector<bool> *seen = nullptr) {
   int n = map.grid.size(), m = map.grid[0].size();
 
-  visited[i * m + j] = 1;
+  if (seen) {
+    if (seen->at(i * m + j))
+      return 0;
+
+    seen->at(i * m + j) = 1;
+  }
+
   if (map.grid[i][j] == 9) {
-    if (count_trails)
-      // Unmark the 9 so it can be counted for part 2.
-      visited[i * m + j] = 0;
     return 1;
   }
 
   int reachable = 0;
 
-  for (int k = 0; k < 8; k += 2) {
-    int ni = i + dy[k], nj = j + dx[k];
-    if (is_valid_pos(ni, nj, n, m) and
-        map.grid[ni][nj] == map.grid[i][j] + 1 and !visited[ni * m + nj])
-      reachable += explore(map, ni, nj, visited, count_trails);
+  for (auto &[di, dj] : adj4) {
+    int ni = i + di, nj = j + dj;
+    if (is_valid_pos(ni, nj, n, m) and map.grid[ni][nj] == map.grid[i][j] + 1)
+      reachable += dfs(map, ni, nj, seen);
   }
-
-  visited[i * m + j] = 0;
 
   return reachable;
 }
@@ -72,11 +69,11 @@ pair<int, int> solve(const Map &map) {
     int i = head.first, j = head.second;
 
     visited.assign(n * m, false);
-    auto score = explore(map, i, j, visited, false);
+    auto score = dfs(map, i, j, &visited);
     part1 += score;
 
-    visited.assign(n * m, false);
-    auto trails = explore(map, i, j, visited, true);
+    // We don't care about visited for part 2
+    auto trails = dfs(map, i, j);
     part2 += trails;
   }
   return {part1, part2};
