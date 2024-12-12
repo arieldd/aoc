@@ -3,12 +3,13 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <vector>
 using namespace std;
 
-#define ll long long
+#define point pair<int, int>
 
-const vector<pair<int, int>> adj4 = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
+const vector<point> adj4 = {{0, 1}, {1, 0}, {0, -1}, {-1, 0}};
 
 inline bool is_valid_pos(int i, int j, int r, int c) {
   return i >= 0 && j >= 0 && i < r && j < c;
@@ -24,12 +25,12 @@ vector<string> read_input(const string &filename) {
   return grid;
 }
 
-int dfs(const vector<string> &grid, vector<int> &scan, int i, int j,
-        int region_id, int &area) {
+auto dfs(const vector<string> &grid, vector<int> &scan, int i, int j,
+         int region_id, int &area, set<pair<point, point>> &perimeters) {
   int n = grid.size(), m = grid[0].size();
 
   if (scan[i * m + j] == region_id)
-    return 0;
+    return;
 
   scan[i * m + j] = region_id;
   area++;
@@ -39,13 +40,12 @@ int dfs(const vector<string> &grid, vector<int> &scan, int i, int j,
 
   for (auto [di, dj] : adj4) {
     int ni = i + di, nj = j + dj;
-    if (!is_valid_pos(ni, nj, n, m) or grid[ni][nj] != label)
-      perimeter++;
-    else if (grid[ni][nj] == label) {
-      perimeter += dfs(grid, scan, ni, nj, region_id, area);
+    if (!is_valid_pos(ni, nj, n, m) or grid[ni][nj] != label) {
+      perimeters.insert({{i, j}, {ni, nj}});
+    } else if (grid[ni][nj] == label) {
+      dfs(grid, scan, ni, nj, region_id, area, perimeters);
     }
   }
-  return perimeter;
 }
 
 int count_sides(const vector<int> &scan, int n, int m, int region_id) {
@@ -105,6 +105,27 @@ int count_sides(const vector<int> &scan, int n, int m, int region_id) {
   return total_sides;
 }
 
+int count_sides_trick(const set<pair<point, point>> &perimeters) {
+  int sides;
+  vector<point> explore_dirs = {{0, 1}, {1, 0}};
+  bool will_count;
+  for (auto [node, boundary] : perimeters) {
+    will_count = true;
+    for (auto [di, dj] : explore_dirs) {
+      point nxt_node = {node.first + di, node.second + dj};
+      point nxt_bound = {boundary.first + di, boundary.second + dj};
+      if (perimeters.contains({nxt_node, nxt_bound})) {
+        will_count = false;
+        break;
+      }
+    }
+    if (will_count)
+      sides++;
+  }
+
+  return sides;
+}
+
 pair<int, int> solve(const vector<string> &grid) {
   int n = grid.size(), m = grid[0].size();
 
@@ -117,9 +138,10 @@ pair<int, int> solve(const vector<string> &grid) {
         continue;
       region_id++;
       int area = 0;
-      auto perimeter = dfs(grid, scan, i, j, region_id, area);
-      part1 += perimeter * area;
-      part2 += count_sides(scan, n, m, region_id) * area;
+      set<pair<point, point>> perimeters;
+      dfs(grid, scan, i, j, region_id, area, perimeters);
+      part1 += perimeters.size() * area;
+      part2 += count_sides_trick(perimeters) * area;
     }
   }
 
