@@ -103,10 +103,25 @@ ll z3_solve(const Machine &claw, ll offset) {
   }
 }
 
+ll alg_solve(const Machine &claw, ll offset) {
+
+  point b = {claw.prize.first + offset, claw.prize.second + offset};
+  ll x1 = (b.first * claw.buttonB.second - b.second * claw.buttonB.first) /
+          (claw.buttonB.second * claw.buttonA.first -
+           claw.buttonA.second * claw.buttonB.first),
+     x2 = (b.second - claw.buttonA.second * x1) / claw.buttonB.second;
+
+  if (claw.buttonA.first * x1 + claw.buttonB.first * x2 != b.first or
+      claw.buttonA.second * x1 + claw.buttonB.second * x2 != b.second)
+    return 0;
+
+  return 3 * x1 + x2;
+}
+
 ll solve(const vector<Machine> &claws, ll offset) {
   ll total = 0;
   for (auto &c : claws) {
-    auto tokens = z3_solve(c, offset);
+    auto tokens = alg_solve(c, offset);
     total += tokens;
   }
   return total;
