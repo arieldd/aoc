@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cctype>
 #include <deque>
 #include <fstream>
 #include <functional>
@@ -36,6 +37,26 @@ template <typename... Args> void println(Args &&...args) {
 #pragma endregion
 
 #pragma region String utils
+template <typename T> auto nums(const std::string &s) -> std::vector<T> {
+  auto n = s.size();
+  std::vector<T> result;
+  for (int i = 0; i < n;) {
+    if (isdigit(s[i])) {
+      T value = s[i] - '0';
+      i++;
+      while (i < n and isdigit(s[i])) {
+        value *= 10;
+        value += s[i] - '0';
+        i++;
+      }
+      result.push_back(value);
+      continue;
+    }
+    i++;
+  }
+  return result;
+}
+
 const char *ws = " \t\n\r\f\v";
 
 // trim from end of string (right)
@@ -77,6 +98,12 @@ inline bool is_valid_pos(int i, int j, int r, int c) {
 // Start from the right clockwise
 const std::vector<int> dy{0, 1, 1, 1, 0, -1, -1, -1},
     dx{1, 1, 0, -1, -1, -1, 0, 1};
+
+const std::vector<std::pair<int, int>> adj4 = {
+    {0, 1}, {1, 0}, {0, -1}, {-1, 0}};
+
+const std::vector<std::pair<int, int>> adj8 = {
+    {0, 1}, {1, 1}, {1, 0}, {1, -1}, {0, -1}, {-1, -1}, {-1, 0}, {-1, 1}};
 
 #pragma endregion
 
