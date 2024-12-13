@@ -1,19 +1,15 @@
-#include "z3++.h"
+#include "utils.h"
 #include <cassert>
-#include <fstream>
-#include <iostream>
-#include <vector>
 
 using namespace std;
-using namespace z3;
+using namespace aoc_utils;
 
 #define ll long long
-#define point pair<ll, ll>
 
 struct Machine {
-  point buttonA;
-  point buttonB;
-  point prize;
+  array<int, 2> A;
+  array<int, 2> B;
+  array<int, 2> P;
 };
 
 vector<Machine> read_input(const string &filename) {
@@ -30,20 +26,16 @@ vector<Machine> read_input(const string &filename) {
       row = 0;
       continue;
     }
-    auto plus_x = line.find("+");
-    auto comma = line.find(", ");
-    auto plus_y = line.find("+", comma + 2);
+    auto values = nums<ll>(line);
     if (row == 0) {
-      next.buttonA.first = stoll(line.substr(plus_x + 1, comma - plus_x));
-      next.buttonA.second = stoll(line.substr(plus_y + 1, line.size()));
+      next.A[0] = values[0];
+      next.A[1] = values[1];
     } else if (row == 1) {
-      next.buttonB.first = stoll(line.substr(plus_x + 1, comma - plus_x));
-      next.buttonB.second = stoll(line.substr(plus_y + 1, line.size()));
+      next.B[0] = values[0];
+      next.B[1] = values[1];
     } else {
-      auto eq_x = line.find('=');
-      auto eq_y = line.find('=', eq_x + 1);
-      next.prize.first = stoll(line.substr(eq_x + 1, comma - eq_x));
-      next.prize.second = stoll(line.substr(eq_y + 1, line.size()));
+      next.P[0] = values[0];
+      next.P[1] = values[1];
     }
     row++;
   }
@@ -55,10 +47,8 @@ int brute_force(const Machine &claw) {
   int best = INT_MAX;
   for (int i = 1; i < 101; i++)
     for (int j = 1; j < 101; j++) {
-      if (claw.buttonA.first * i + claw.buttonB.first * j ==
-              claw.prize.first and
-          claw.buttonA.second * i + claw.buttonB.second * j ==
-              claw.prize.second)
+      if (claw.A[0] * i + claw.B[0] * j == claw.P[0] and
+          claw.A[1] * i + claw.B[1] * j == claw.P[1])
         best = min(best, 3 * i + j);
     }
   return best;
@@ -75,44 +65,15 @@ int part1(const vector<Machine> &claws) {
   return total;
 }
 
-ll z3_solve(const Machine &claw, ll offset) {
-  context c;
-
-  expr x = c.int_const("x");
-  expr y = c.int_const("y");
-  solver s(c);
-
-  expr eq1 =
-      c.int_val(claw.buttonA.first) * x + c.int_val(claw.buttonB.first) * y ==
-      c.int_val(claw.prize.first + offset);
-  expr eq2 =
-      c.int_val(claw.buttonA.second) * x + c.int_val(claw.buttonB.second) * y ==
-      c.int_val(claw.prize.second + offset);
-
-  s.add(eq1);
-  s.add(eq2);
-  s.add(x > 0);
-  s.add(y > 0);
-
-  switch (s.check()) {
-  case unsat:
-  case unknown:
-    return 0;
-  case sat:
-    return s.get_model().eval(3 * x + y).as_uint64();
-  }
-}
-
 ll alg_solve(const Machine &claw, ll offset) {
 
-  point b = {claw.prize.first + offset, claw.prize.second + offset};
-  ll x1 = (b.first * claw.buttonB.second - b.second * claw.buttonB.first) /
-          (claw.buttonB.second * claw.buttonA.first -
-           claw.buttonA.second * claw.buttonB.first),
-     x2 = (b.second - claw.buttonA.second * x1) / claw.buttonB.second;
+  array<ll, 2> b = {claw.P[0] + offset, claw.P[1] + offset};
+  ll x1 = (b[0] * claw.B[1] - b[1] * claw.B[0]) /
+          (claw.B[1] * claw.A[0] - claw.A[1] * claw.B[0]),
+     x2 = (b[1] - claw.A[1] * x1) / claw.B[1];
 
-  if (claw.buttonA.first * x1 + claw.buttonB.first * x2 != b.first or
-      claw.buttonA.second * x1 + claw.buttonB.second * x2 != b.second)
+  if (claw.A[0] * x1 + claw.B[0] * x2 != b[0] or
+      claw.A[1] * x1 + claw.B[1] * x2 != b[1])
     return 0;
 
   return 3 * x1 + x2;
