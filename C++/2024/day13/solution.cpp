@@ -1,9 +1,11 @@
+#include "z3++.h"
 #include <cassert>
 #include <fstream>
 #include <iostream>
-#include <map>
 #include <vector>
+
 using namespace std;
+using namespace z3;
 
 #define ll long long
 #define point pair<ll, ll>
@@ -49,46 +51,71 @@ vector<Machine> read_input(const string &filename) {
   return claws;
 }
 
-ll explore(const Machine claw, int tokens, int pressA, int pressB, point pos,
-           map<tuple<point, int, int, int>, ll> &cache) {
-  if (pressA > 100 or pressB > 100)
-    return INT64_MAX;
-
-  if (pos == claw.prize)
-    return tokens;
-
-  if (cache.contains({pos, tokens, pressA, pressB}))
-    return cache.at({pos, tokens, pressA, pressB});
-
-  point next = {pos.first + claw.buttonA.first,
-                pos.second + claw.buttonA.second};
-  auto tokensA = explore(claw, tokens + 3, pressA + 1, pressB, next, cache);
-  next = {pos.first + claw.buttonB.first, pos.second + claw.buttonB.second};
-  auto tokensB = explore(claw, tokens + 1, pressA, pressB + 1, next, cache);
-
-  auto min_tokens = min(tokensA, tokensB);
-  cache[{pos, tokens, pressA, pressB}] = min_tokens;
-  return min_tokens;
+int brute_force(const Machine &claw) {
+  int best = INT_MAX;
+  for (int i = 1; i < 101; i++)
+    for (int j = 1; j < 101; j++) {
+      if (claw.buttonA.first * i + claw.buttonB.first * j ==
+              claw.prize.first and
+          claw.buttonA.second * i + claw.buttonB.second * j ==
+              claw.prize.second)
+        best = min(best, 3 * i + j);
+    }
+  return best;
 }
 
 int part1(const vector<Machine> &claws) {
   auto total = 0;
   for (auto &c : claws) {
-    map<tuple<point, int, int, int>, ll> cache;
-    auto tokens = explore(c, 0, 0, 0, {0, 0}, cache);
+    auto tokens = brute_force(c);
 
-    if (tokens < INT64_MAX)
+    if (tokens < INT_MAX)
       total += tokens;
   }
   return total;
 }
 
-int part2(const vector<Machine> &claws) { return 0; }
+ll z3_solve(const Machine &claw, ll offset) {
+  context c;
+
+  expr x = c.int_const("x");
+  expr y = c.int_const("y");
+  solver s(c);
+
+  expr eq1 =
+      c.int_val(claw.buttonA.first) * x + c.int_val(claw.buttonB.first) * y ==
+      c.int_val(claw.prize.first + offset);
+  expr eq2 =
+      c.int_val(claw.buttonA.second) * x + c.int_val(claw.buttonB.second) * y ==
+      c.int_val(claw.prize.second + offset);
+
+  s.add(eq1);
+  s.add(eq2);
+  s.add(x > 0);
+  s.add(y > 0);
+
+  switch (s.check()) {
+  case unsat:
+  case unknown:
+    return 0;
+  case sat:
+    return s.get_model().eval(3 * x + y).as_uint64();
+  }
+}
+
+ll solve(const vector<Machine> &claws, ll offset) {
+  ll total = 0;
+  for (auto &c : claws) {
+    auto tokens = z3_solve(c, offset);
+    total += tokens;
+  }
+  return total;
+}
 
 int main(int argc, char *argv[]) {
   assert(argc > 1 && "Need some input brotha\n");
   auto claws = read_input(argv[1]);
-  cout << "Part 1:" << part1(claws) << '\n';
-  cout << "Part 2:" << part2(claws) << '\n';
+  cout << "Part 1:" << solve(claws, 0) << '\n';
+  cout << "Part 2:" << solve(claws, 10000000000000) << '\n';
   return 0;
 }
