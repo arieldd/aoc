@@ -41,15 +41,20 @@ template <typename T> auto nums(const std::string &s) -> std::vector<T> {
   auto n = s.size();
   std::vector<T> result;
   for (int i = 0; i < n;) {
-    if (isdigit(s[i])) {
+    if (isdigit(s[i]) or s[i] == '-') {
       T value = s[i] - '0';
+      char sign = 1;
+      if (s[i] == '-') {
+        value = 0;
+        sign = -1;
+      }
       i++;
       while (i < n and isdigit(s[i])) {
         value *= 10;
         value += s[i] - '0';
         i++;
       }
-      result.push_back(value);
+      result.push_back(value * sign);
       continue;
     }
     i++;
