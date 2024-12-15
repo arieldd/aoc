@@ -62,7 +62,7 @@ template <typename T> auto nums(const std::string &s) -> std::vector<T> {
   return result;
 }
 
-const char *ws = " \t\n\r\f\v";
+inline const char *ws = " \t\n\r\f\v";
 
 // trim from end of string (right)
 inline std::string &rtrim(std::string &s, const char *t = ws) {
