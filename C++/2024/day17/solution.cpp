@@ -1,8 +1,6 @@
 #include "utils.h"
-#include <algorithm>
+#include <__fwd/get.h>
 #include <cassert>
-#include <numeric>
-#include <string>
 using namespace std;
 using namespace aoc_utils;
 
@@ -22,7 +20,7 @@ enum InstrType {
 
 struct Instr {
   InstrType op;
-  ll arg;
+  char arg;
 };
 
 struct Computer {
@@ -44,7 +42,7 @@ Computer read_input(const string &filename) {
   getline(fs, line);
   // Ignore new line
   getline(fs, line);
-  auto values = nums<ll>(line);
+  auto values = nums<char>(line);
   for (ll i = 0; i < values.size(); i += 2)
     result.program.push_back(
         Instr{.op = static_cast<InstrType>(values[i]), .arg = values[i + 1]});
@@ -72,14 +70,14 @@ ll combo(ll value, const Computer &pc) {
   }
 }
 
-vector<ll> run_program(Computer pc, bool once = false) {
-  vector<ll> output;
+vector<char> run_program(Computer pc, bool once = false) {
+  vector<char> output;
   auto n = pc.program.size();
   for (int ip = 0; ip < n; ip++) {
     auto instr = pc.program[ip];
     switch (instr.op) {
     case adv:
-      pc.A /= pow(2, combo(instr.arg, pc));
+      pc.A /= 1 << combo(instr.arg, pc);
       break;
     case bxl:
       pc.B ^= instr.arg;
@@ -100,10 +98,10 @@ vector<ll> run_program(Computer pc, bool once = false) {
       output.push_back(combo(instr.arg, pc) % 8);
       break;
     case bdv:
-      pc.B = pc.A / pow(2, combo(instr.arg, pc));
+      pc.B = pc.A / (1 << combo(instr.arg, pc));
       break;
     case cdv:
-      pc.C = pc.A / pow(2, combo(instr.arg, pc));
+      pc.C = pc.A / (1 << combo(instr.arg, pc));
       break;
     }
   }
@@ -120,14 +118,12 @@ string part1(const Computer &pc) {
   return result;
 }
 
-ll find_A(Computer pc, const vector<ll> &target, ll shift, int index) {
+ll find_A(Computer pc, const vector<char> &target, char shift, int index) {
   if (index == target.size()) {
     return pc.A;
   }
 
-  vector<ll> expected;
-  for (int i = index; i >= 0; i--)
-    expected.push_back(target[i]);
+  vector<char> expected(target.end() - index - 1, target.end());
 
   ll start = pc.A << shift;
   for (ll rem = 0; rem <= 8; rem++) {
@@ -144,12 +140,11 @@ ll find_A(Computer pc, const vector<ll> &target, ll shift, int index) {
 }
 
 ll part2(Computer pc) {
-  vector<ll> target;
+  vector<char> target;
   for (const auto &instr : pc.program) {
     target.push_back(instr.op);
     target.push_back(instr.arg);
   }
-  reverse(target.begin(), target.end());
 
   pc.A = 0;
   ll result = find_A(pc, target, 3, 0);
