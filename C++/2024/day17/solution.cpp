@@ -116,10 +116,11 @@ string part1(const Computer &pc) {
   string result;
   for (auto v : output)
     result += to_string(v) + ',';
+  result.pop_back();
   return result;
 }
 
-ll find_A(Computer pc, const vector<ll> &target, ll factor, int index) {
+ll find_A(Computer pc, const vector<ll> &target, ll shift, int index) {
   if (index == target.size()) {
     return pc.A;
   }
@@ -128,12 +129,12 @@ ll find_A(Computer pc, const vector<ll> &target, ll factor, int index) {
   for (int i = index; i >= 0; i--)
     expected.push_back(target[i]);
 
-  ll start = pc.A * factor;
+  ll start = pc.A << shift;
   for (ll rem = 0; rem <= 8; rem++) {
     pc.A = start + rem;
     auto output = run_program(pc);
     if (output == expected) {
-      ll value = find_A(pc, target, factor, index + 1);
+      ll value = find_A(pc, target, shift, index + 1);
       if (value != -1) {
         return value;
       }
@@ -142,7 +143,7 @@ ll find_A(Computer pc, const vector<ll> &target, ll factor, int index) {
   return -1;
 }
 
-ll part2(Computer pc, ll factor) {
+ll part2(Computer pc) {
   vector<ll> target;
   for (const auto &instr : pc.program) {
     target.push_back(instr.op);
@@ -151,7 +152,7 @@ ll part2(Computer pc, ll factor) {
   reverse(target.begin(), target.end());
 
   pc.A = 0;
-  ll result = find_A(pc, target, factor, 0);
+  ll result = find_A(pc, target, 3, 0);
   if (result != -1) {
     pc.A = result;
     cout << part1(pc) << '\n';
@@ -163,6 +164,6 @@ int main(int argc, char *argv[]) {
   assert(argc > 1 && "Need some input brotha\n");
   auto pc = read_input(argv[1]);
   cout << "Part 1:" << part1(pc) << '\n';
-  cout << "Part 2:" << part2(pc, 8) << '\n';
+  cout << "Part 2:" << part2(pc) << '\n';
   return 0;
 }
