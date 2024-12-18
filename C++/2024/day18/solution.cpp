@@ -1,7 +1,5 @@
 #include "utils.h"
-#include <algorithm>
 #include <cassert>
-#include <queue>
 using namespace std;
 using namespace aoc_utils;
 
@@ -20,11 +18,6 @@ vector<arr<int, 2>> read_input(const string &filename) {
   return bytes;
 }
 
-bool cmp(const arr<int, 3> &lhs, const arr<int, 3> rhs) {
-  // Compare on distance
-  return lhs[2] < rhs[2];
-}
-
 int part1(const vector<arr<int, 2>> &bytes, int limit, int n) {
   int result = 0;
 
@@ -35,26 +28,25 @@ int part1(const vector<arr<int, 2>> &bytes, int limit, int n) {
   for (int i = 0; i <= limit; i++)
     distances[bytes[i][0] * n + bytes[i][1]] = -1;
 
-  auto cmp = [](const arr<int, 3> &lhs, const arr<int, 3> rhs) -> bool {
-    // Compare on distance
-    return lhs[2] < rhs[2];
-  };
+  vector<arr<int, 2>> pq{{0, 0}};
 
-  vector<arr<int, 3>> pq{{0, 0, 0}};
+  for (int i = 0; i < pq.size(); i++) {
+    auto current = pq[i];
 
-  while (!pq.empty()) {
-    pop_heap(pq.begin(), pq.end(), cmp);
-    auto current = pq.back();
-    pq.pop_back();
+    if (current == arr<int, 2>{n - 1, n - 1})
+      break;
 
     for (auto [di, dj] : adj4) {
-      arr<int, 3> entry = {current[0] + di, current[1] + dj, current[2] + 1};
-      bool can_move = is_valid_pos(entry[0], entry[1], n, n) &&
-                      distances[entry[0] * n + entry[1]] >= 0;
-      if (can_move && distances[entry[0] * n + entry[1]] > entry[2]) {
-        distances[entry[0] * n + entry[1]] = entry[2];
-        pq.push_back(entry);
-        push_heap(pq.begin(), pq.end(), cmp);
+      arr<int, 2> pos = {current[0] + di, current[1] + dj};
+
+      bool can_move = is_valid_pos(pos[0], pos[1], n, n) &&
+                      distances[pos[0] * n + pos[1]] > 0;
+
+      if (can_move && distances[pos[0] * n + pos[1]] >
+                          distances[current[0] * n + current[1]] + 1) {
+        distances[pos[0] * n + pos[1]] =
+            distances[current[0] * n + current[1]] + 1;
+        pq.push_back(pos);
       }
     }
   }
