@@ -1,5 +1,7 @@
 #include "utils.h"
 #include <cassert>
+#include <climits>
+#include <iostream>
 using namespace std;
 using namespace aoc_utils;
 
@@ -17,102 +19,76 @@ vector<string> read_input(const string &filename) {
   return grid;
 }
 
-auto cheat_path(const vector<string> &grid, arr<int, 2> start, arr<int, 2> from,
-                arr<int, 2> end, const vector<arr<int, 2>> &race) {
-
-  int n = grid.size(), m = grid[0].size();
-  vector<arr<int, 2>> path;
-
-  auto [i, j] = start;
-
-  pair<arr<int, 4>, int> cheat = {{i, j, -1, -1}, INT_MAX};
-  for (auto [di, dj] : adj4) {
-    arr<int, 2> pos = {i + di, j + dj};
-    if (pos == from)
-      continue;
-
-    if (is_valid_pos(pos[0], pos[1], n, m) and grid[pos[0]][pos[1]] != '#') {
-      auto it = find(race.begin(), race.end(), pos);
-      int local_dist = distance(it, race.end());
-      if (local_dist < cheat.second) {
-        cheat.first[2] = pos[0];
-        cheat.first[3] = pos[1];
-        cheat.second = local_dist;
-      }
-    }
-  }
-  return cheat;
-}
-
-void find_cheats(const vector<string> &grid, int index, arr<int, 2> end,
-                 const vector<arr<int, 2>> &race,
-                 map<arr<int, 4>, int> &cheats) {
-
-  int n = grid.size(), m = grid[0].size();
-  auto current = race[index];
-  int distance = race.size() - index - 1;
-  for (auto [di, dj] : adj4) {
-    int ni = current[0] + di, nj = current[1] + dj;
-    if (is_valid_pos(ni, nj, n, m) and grid[ni][nj] == '#') {
-      auto cheat = cheat_path(grid, {ni, nj}, current, end, race);
-      if (cheat.second < distance) {
-        cheat.second = distance - cheat.second - 1;
-        cheats.insert(cheat);
-      }
-    }
-  }
-}
-
-int part1(const vector<string> &grid) {
+int solve(const vector<string> &grid, int cheat_size, int threshold) {
   int n = grid.size(), m = grid[0].size();
 
+  vector<int> distances(n * m, INT_MAX);
   arr<int, 2> start, end;
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < m; j++) {
       if (grid[i][j] == 'S')
         start = {i, j};
-      else if (grid[i][j] == 'E')
+      if (grid[i][j] == 'E') {
+        distances[i * m + j] = 0;
         end = {i, j};
+      }
     }
   }
 
-  vector<arr<int, 2>> race;
-  vector<arr<int, 2>> dq{start};
+  vector<arr<int, 2>> path{end};
+  arr<int, 2> prev = end;
+  for (int k = 0; k < path.size(); k++) {
+    auto [i, j] = path[k];
 
-  for (int k = 0; k < dq.size(); k++) {
-    auto [i, j] = dq[k];
-
-    race.push_back(dq[k]);
     for (auto [di, dj] : adj4) {
       int ni = i + di, nj = j + dj;
-      if (is_valid_pos(ni, nj, n, m) and grid[ni][nj] != '#' and
-          find(dq.begin(), dq.end(), arr<int, 2>{ni, nj}) == dq.end())
-        dq.push_back({ni, nj});
-    }
-  }
+      if (prev == arr<int, 2>{ni, nj})
+        continue;
 
-  map<arr<int, 4>, int> cheats;
-  for (int i = 0; i < race.size(); i++) {
-    find_cheats(grid, i, end, race, cheats);
+      if (is_valid_pos(ni, nj, n, m) and grid[ni][nj] != '#') {
+        path.push_back({ni, nj});
+        distances[ni * m + nj] = distances[i * m + j] + 1;
+        break;
+      }
+    }
+    prev = {i, j};
   }
 
   int result = 0;
-  map<int, int> savings;
-  for (auto entry : cheats) {
-    savings[entry.second]++;
-    if (entry.second >= 100)
-      result++;
-  }
+  for (auto &pos : path) {
+    if (pos == end)
+      continue;
 
+    int distance = distances[pos[0] * m + pos[1]];
+
+    if (distance < threshold)
+      continue;
+
+    for (int i = pos[0] - cheat_size; i <= pos[0] + cheat_size; i++) {
+      for (int j = pos[1] - cheat_size; j <= pos[1] + cheat_size; j++) {
+        int walked = abs(pos[0] - abs(i)) + abs(pos[1] - abs(j));
+        if (walked > cheat_size)
+          continue;
+        if (is_valid_pos(i, j, n, m) and grid[i][j] != '#') {
+          auto next = arr<int, 2>{i, j};
+          int new_dist = distances[next[0] * m + next[1]];
+          if (new_dist + walked < distance) {
+            // This saves time, is it enough?
+            auto saved = distance - (new_dist + walked);
+            if (saved >= threshold)
+              result++;
+          }
+        }
+      }
+    }
+  }
   return result;
 }
-
-int part2(const vector<string> &lines) { return 0; }
 
 int main(int argc, char *argv[]) {
   assert(argc > 1 && "Need some input brotha\n");
   auto grid = read_input(argv[1]);
-  cout << "Part 1:" << part1(grid) << '\n';
-  cout << "Part 2:" << part2(grid) << '\n';
+  cout << "Part 1:" << solve(grid, 2, 100) << '\n';
+  cout << "Part 2:" << solve(grid, 20, 100) << '\n';
   return 0;
 }
