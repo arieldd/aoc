@@ -1,6 +1,7 @@
 #include "utils.h"
 #include <cassert>
 #include <climits>
+#include <ranges>
 using namespace std;
 using namespace aoc_utils;
 
@@ -61,83 +62,50 @@ void find_paths(const map<char, arr<ll, 2>> &keypad, vector<string> &all_paths,
   }
 }
 
-string dir_path(char start, char end) {
-  string path;
+ll best_path(char from, char to, int level,
+             map<tuple<char, char, int>, ll> &cache) {
 
-  assert(start != ' ' and end != ' ' && "Panic mode!");
+  auto entry = tie(from, to, level);
+  if (cache.contains(entry))
+    return cache.at(entry);
 
-  auto gap = DirPad.at(' ');
-  auto p0 = arr<ll, 2>(DirPad.at(start)); // Copy for modyfing
-  auto p1 = DirPad.at(end);
-
-  while (p0[1] < p1[1]) {
-    p0[1]++;
-    path.push_back('>');
-  }
-  while (p0[0] > p1[0]) {
-    p0[0]--;
-    path.push_back('^');
-  }
-  while (p0[0] < p1[0]) {
-    p0[0]++;
-    path.push_back('v');
-  }
-  while (p0[1] > p1[1]) {
-    p0[1]--;
-    path.push_back('<');
-  }
-
-  assert(p0 != gap && "Panic mode!");
-
-  path.push_back('A');
-  return path;
-}
-
-map<arr<char, 2>, ll> get_freq(const string &path) {
-  map<arr<char, 2>, ll> freq;
-  auto current = 'A';
-  for (auto key : path) {
-    freq[{current, key}]++;
-    current = key;
-  }
-  return freq;
-}
-
-ll solve(const vector<string> &codes, ll robots) {
-  ll result = 0;
-  for (auto &code : codes) {
-    map<char, vector<string>> paths;
-    char current = 'A';
-    for (auto key : code) {
-      vector<string> key_paths;
-      find_paths(NumPad, key_paths, NumPad.at(current), NumPad.at(key), {});
-      paths[key] = key_paths;
-      current = key;
+  ll best = LONG_MAX;
+  vector<string> all_paths;
+  find_paths(DirPad, all_paths, DirPad.at(from), DirPad.at(to), {'A'});
+  for (auto &path : all_paths) {
+    ll length = 0;
+    for (auto [a, b] : path | views::pairwise) {
+      length += (level == 1) ? 1 : best_path(a, b, level - 1, cache);
     }
+    if (length < best)
+      best = length;
+  }
 
+  cache.insert({entry, best});
+  return best;
+}
+
+ll solve(const vector<string> &codes, int robots) {
+  ll result = 0;
+
+  map<tuple<char, char, int>, ll> cache;
+  for (auto code : codes) {
     ll command_size = 0;
-    for (auto entry : paths) {
-      ll best_size = 0;
-      for (auto possible : entry.second) {
-        auto pair_freq = get_freq(possible);
-        ll path_size = 0;
-        for (char i = 0; i < robots; i++) {
-          map<arr<char, 2>, ll> next;
-          path_size = 0;
-          for (auto [pair, repeat] : pair_freq) {
-            string expanded = dir_path(pair[0], pair[1]);
-            path_size += (expanded.size() * repeat);
-            for (auto [new_pair, _ /* Always 1 */] : get_freq(expanded))
-              next[new_pair] += repeat;
-          }
-          pair_freq = next;
+    code = 'A' + code;
+    for (auto [num_from, num_to] : code | views::pairwise) {
+      vector<string> all_paths;
+      find_paths(NumPad, all_paths, NumPad.at(num_from), NumPad.at(num_to), {});
+      ll best = 0;
+      for (auto path : all_paths) {
+        path = 'A' + path;
+        ll path_length = 0;
+        for (auto [from, to] : path | views::pairwise) {
+          path_length += best_path(from, to, robots, cache);
         }
-        if (!best_size or path_size < best_size) {
-          best_size = path_size;
-        }
+        if (!best or best > path_length)
+          best = path_length;
       }
-
-      command_size += best_size;
+      command_size += best;
     }
 
     result += nums<ll>(code)[0] * command_size;
