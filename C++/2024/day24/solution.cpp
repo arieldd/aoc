@@ -1,8 +1,5 @@
 #include "utils.h"
-#include <algorithm>
 #include <cassert>
-#include <ranges>
-#include <utility>
 using namespace std;
 using namespace aoc_utils;
 
@@ -11,31 +8,16 @@ using namespace aoc_utils;
 
 enum GateType { AND, OR, XOR };
 
-ostream &operator<<(auto &os, GateType &gate) {
-  switch (gate) {
-  case AND:
-    os << "AND";
-    break;
-  case OR:
-    os << "OR";
-    break;
-  case XOR:
-    os << "XOR";
-    break;
-  }
-  return os;
-}
-
-struct Data {
-  map<string, char> wire_values;
+struct Wires {
+  map<string, char> values;
   map<string, tuple<string, string, GateType>> outputs;
   map<tuple<string, string, GateType>, string> gates;
-  set<string> bits;
+  set<string> out_bits;
   set<arr<string, 2>> inputs;
 };
 
-Data read_input(const string &filename) {
-  Data conn;
+Wires read_input(const string &filename) {
+  Wires conn;
   ifstream fs(filename);
 
   string line;
@@ -50,7 +32,7 @@ Data read_input(const string &filename) {
     if (input_values) {
       auto wire = split(line, ':');
       char value = wire[1][0] - '0';
-      conn.wire_values[wire[0]] = value;
+      conn.values[wire[0]] = value;
       if (wire[0] == "y00")
         index = 0;
       if (wire[0].starts_with('x'))
@@ -69,7 +51,7 @@ Data read_input(const string &filename) {
       conn.outputs[parts.back()] = gate;
 
       if (parts.back().starts_with('z'))
-        conn.bits.insert(parts.back());
+        conn.out_bits.insert(parts.back());
 
       conn.gates.insert({gate, parts.back()});
     }
@@ -79,33 +61,29 @@ Data read_input(const string &filename) {
   return conn;
 }
 
-ll to_decimal(const Data &conn, char letter, int index = -1) {
+ll to_decimal(const string &bits) {
   ll result = 0, pow = 0;
-  for (auto [wire, value] : conn.wire_values) {
-    if (wire.starts_with(letter)) {
-      if (value)
-        result += (ll)1 << pow;
-      if (index >= 0 and nums<int>(wire)[0] == index)
-        break;
+  for (auto c : bits) {
+    if (c)
+      result += (ll)1 << pow;
 
-      pow++;
-    }
+    pow++;
   }
   return result;
 }
 
-char run_gate(const Data &conn, string wire) {
-  if (conn.wire_values.contains(wire))
-    return conn.wire_values.at(wire);
+char gate_value(const Wires &conn, string wire) {
+  if (conn.values.contains(wire))
+    return conn.values.at(wire);
 
   assert(conn.outputs.contains(wire) && "Hmmm\n");
 
   char output = -1;
   auto [w1, w2, op] = conn.outputs.at(wire);
 
-  auto op1 = run_gate(conn, w1);
+  auto op1 = gate_value(conn, w1);
 
-  auto op2 = run_gate(conn, w2);
+  auto op2 = gate_value(conn, w2);
 
   switch (op) {
   case AND:
@@ -122,17 +100,17 @@ char run_gate(const Data &conn, string wire) {
   return output;
 }
 
-ll part1(Data conn, int index = -1) {
-  auto n = (index >= 0) ? index : conn.bits.size();
-  for (int i = 0; i < n; i++) {
-    auto output = *next(conn.bits.begin(), i);
-    conn.wire_values[output] = run_gate(conn, output);
+ll part1(const Wires &conn) {
+  auto n = conn.out_bits.size();
+  string bits{};
+  for (auto &bit : conn.out_bits) {
+    bits += gate_value(conn, bit);
   }
 
-  return to_decimal(conn, 'z', index);
+  return to_decimal(bits);
 }
 
-arr<string, 2> find_pair(const Data &conn, string w1, string w2, GateType op) {
+arr<string, 2> find_pair(const Wires &conn, string w1, string w2, GateType op) {
   for (auto [gate, out] : conn.gates) {
     auto [g1, g2, g_op] = gate;
     if (g_op == op) {
@@ -149,55 +127,58 @@ arr<string, 2> find_pair(const Data &conn, string w1, string w2, GateType op) {
   return {};
 }
 
-string part2(Data conn, ll original) {
+// Build a full adder circuit and check when the expected inputs are wrong
+string part2(Wires conn) {
 
   set<string> swaps;
   string cin = "";
   for (auto [x, y] : conn.inputs) {
-    println(x, " ", y);
     int bit_idx = nums<int>(x)[0];
-    string c1, p_sum, c2, carry, sum;
+    string psum, c1, c2, carry, sum;
 
+    // First half adder with the inputs
     for (auto op : {XOR, AND}) {
       auto gate = tie(x, y, op);
       if (!conn.gates.contains(gate)) {
         continue;
       };
       if (op == XOR) {
-        p_sum = conn.gates.at(gate);
+        psum = conn.gates.at(gate);
       } else if (op == AND) {
         c1 = conn.gates.at(gate);
       }
     }
-    if (!cin.empty() and !p_sum.empty()) {
+
+    // Second half adder
+    if (!cin.empty() and !psum.empty()) {
       for (auto op : {XOR, AND}) {
-        arr<string, 2> keys{cin, p_sum};
-        sort(keys.begin(), keys.end());
-
-        auto gate = tie(keys[0], keys[1], op);
+        auto gate = tie(min(cin, psum), max(cin, psum), op);
         if (!conn.gates.contains(gate)) {
-          auto [wrong, right] = find_pair(conn, cin, p_sum, op);
-          swaps.insert(wrong);
-          swaps.insert(right);
-
+          auto [wrong, right] = find_pair(conn, cin, psum, op);
+          if (!swaps.contains(wrong) and !swaps.contains(right)) {
+            swaps.insert(wrong);
+            swaps.insert(right);
+          }
           auto g1 = conn.outputs.at(wrong);
           auto g2 = conn.outputs.at(right);
 
           swap(conn.gates.at(g1), conn.gates.at(g2));
-          cout << "Swapped " << wrong << " with " << right << '\n';
-          for (auto key : {&cin, &c1, &p_sum, &c2, &carry})
+          for (auto key : {&cin, &c1, &psum, &c2})
             if (*key == wrong) {
               *key = right;
               break;
             }
+
           continue;
         }
+
         if (op == XOR) {
+          // This the output bit
           sum = conn.gates.at(gate);
           if (!sum.starts_with('z') or nums<int>(sum)[0] != nums<int>(x)[0]) {
 
             string correct_sum;
-            for (auto z : conn.bits)
+            for (auto z : conn.out_bits)
               if (nums<int>(z)[0] == bit_idx) {
                 correct_sum = z;
                 break;
@@ -206,54 +187,49 @@ string part2(Data conn, ll original) {
             auto correct_gate = conn.outputs.at(correct_sum);
             swap(conn.gates.at(gate), conn.gates.at(correct_gate));
 
-            for (auto key : {&cin, &c1, &p_sum, &c2, &carry})
+            for (auto key : {&cin, &c1, &psum, &c2})
               if (*key == correct_sum) {
                 *key = sum;
-                break;
               }
 
             swaps.insert(sum);
             swaps.insert(correct_sum);
-            cout << "Swapped " << sum << " with " << correct_sum << '\n';
           }
         } else if (op == AND) {
           c2 = conn.gates.at(gate);
         }
       }
     }
+
+    // Finally get the carry with an OR gate
     carry = c1;
     if (!c1.empty() and !c2.empty()) {
       GateType op = OR;
-      arr<string, 2> keys{c1, c2};
-      sort(keys.begin(), keys.end());
 
-      auto gate = tie(keys[0], keys[1], op);
+      auto gate = tie(min(c1, c2), max(c1, c2), op);
       if (conn.gates.contains(gate)) {
         carry = conn.gates.at(gate);
       } else {
         auto [wrong, right] = find_pair(conn, c1, c2, op);
-        swaps.insert(wrong);
-        swaps.insert(right);
-
+        if (!swaps.contains(wrong) and !swaps.contains(right)) {
+          swaps.insert(wrong);
+          swaps.insert(right);
+        }
         auto g1 = conn.outputs.at(wrong);
         auto g2 = conn.outputs.at(right);
 
-        for (auto key : {&cin, &c1, &p_sum, &c2, &carry})
+        swap(conn.gates.at(g1), conn.gates.at(g2));
+
+        for (auto key : {&cin, &c1, &psum, &c2, &carry})
           if (*key == wrong) {
             *key = right;
-            break;
           }
-        continue;
-        cout << "Swapped " << wrong << " with " << right << '\n';
-
-        swap(conn.gates.at(g1), conn.gates.at(g2));
       }
     }
     cin = carry;
   }
-  cout << part1(conn) << "=" << to_decimal(conn, 'x') + to_decimal(conn, 'y')
-       << '\n';
-  string result = "";
+
+  string result = "\n";
   for (auto key : swaps)
     result += key + ',';
   if (!result.empty())
@@ -264,8 +240,7 @@ string part2(Data conn, ll original) {
 int main(int argc, char *argv[]) {
   assert(argc > 1 && "Need some input brotha\n");
   auto conn = read_input(argv[1]);
-  auto original = part1(conn);
-  cout << "Part 1:" << original << '\n';
-  cout << "Part 2:" << part2(conn, original) << '\n';
+  cout << "Part 1:" << part1(conn) << '\n';
+  cout << "Part 2:" << part2(conn) << '\n';
   return 0;
 }
