@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cassert>
 #include <ranges>
+#include <utility>
 using namespace std;
 using namespace aoc_utils;
 
@@ -25,7 +26,7 @@ ostream &operator<<(auto &os, GateType &gate) {
   return os;
 }
 
-struct Graph {
+struct Data {
   map<string, char> wire_values;
   map<string, tuple<string, string, GateType>> outputs;
   map<tuple<string, string, GateType>, string> gates;
@@ -33,8 +34,8 @@ struct Graph {
   set<arr<string, 2>> inputs;
 };
 
-Graph read_input(const string &filename) {
-  Graph conn;
+Data read_input(const string &filename) {
+  Data conn;
   ifstream fs(filename);
 
   string line;
@@ -55,18 +56,22 @@ Graph read_input(const string &filename) {
       if (wire[0].starts_with('x'))
         inputs.push_back({wire[0], ""});
       else
-        inputs[index][1] = wire[1];
+        inputs[index][1] = wire[0];
       index++;
     } else {
       auto parts = split(line, ' ');
       GateType op = (parts[1] == "AND") ? AND : (parts[1] == "OR") ? OR : XOR;
-      auto gate = tie(parts[0], parts[2], op);
-      conn.outputs[parts.back()] = gate;
-      if (parts.back().starts_with('z'))
-        conn.bits.insert(parts.back());
+
       arr<string, 2> entry = {parts[0], parts[2]};
       sort(entry.begin(), entry.end());
-      conn.gates.insert({tie(entry[0], entry[1], op), parts.back()});
+
+      auto gate = tie(entry[0], entry[1], op);
+      conn.outputs[parts.back()] = gate;
+
+      if (parts.back().starts_with('z'))
+        conn.bits.insert(parts.back());
+
+      conn.gates.insert({gate, parts.back()});
     }
   }
   for (auto in : inputs)
@@ -74,7 +79,7 @@ Graph read_input(const string &filename) {
   return conn;
 }
 
-ll to_decimal(const Graph &conn, char letter, int index = -1) {
+ll to_decimal(const Data &conn, char letter, int index = -1) {
   ll result = 0, pow = 0;
   for (auto [wire, value] : conn.wire_values) {
     if (wire.starts_with(letter)) {
@@ -89,7 +94,7 @@ ll to_decimal(const Graph &conn, char letter, int index = -1) {
   return result;
 }
 
-char run_gate(const Graph &conn, string wire) {
+char run_gate(const Data &conn, string wire) {
   if (conn.wire_values.contains(wire))
     return conn.wire_values.at(wire);
 
@@ -117,7 +122,7 @@ char run_gate(const Graph &conn, string wire) {
   return output;
 }
 
-ll part1(Graph conn, int index = -1) {
+ll part1(Data conn, int index = -1) {
   auto n = (index >= 0) ? index : conn.bits.size();
   for (int i = 0; i < n; i++) {
     auto output = *next(conn.bits.begin(), i);
@@ -127,18 +132,37 @@ ll part1(Graph conn, int index = -1) {
   return to_decimal(conn, 'z', index);
 }
 
-string part2(Graph conn, ll original) {
-  cout << conn.gates.size() << '\n';
-  ll target = to_decimal(conn, 'x') + to_decimal(conn, 'y');
+arr<string, 2> find_pair(const Data &conn, string w1, string w2, GateType op) {
+  for (auto [gate, out] : conn.gates) {
+    auto [g1, g2, g_op] = gate;
+    if (g_op == op) {
+      if (g1 == w1)
+        return {w2, g2};
+      if (g1 == w2)
+        return {w1, g2};
+      if (g2 == w1)
+        return {w2, g1};
+      if (g2 == w2)
+        return {w1, g1};
+    }
+  }
+  return {};
+}
+
+string part2(Data conn, ll original) {
 
   set<string> swaps;
   string cin = "";
   for (auto [x, y] : conn.inputs) {
+    println(x, " ", y);
+    int bit_idx = nums<int>(x)[0];
     string c1, p_sum, c2, carry, sum;
+
     for (auto op : {XOR, AND}) {
       auto gate = tie(x, y, op);
-      if (!conn.gates.contains(gate))
+      if (!conn.gates.contains(gate)) {
         continue;
+      };
       if (op == XOR) {
         p_sum = conn.gates.at(gate);
       } else if (op == AND) {
@@ -147,27 +171,88 @@ string part2(Graph conn, ll original) {
     }
     if (!cin.empty() and !p_sum.empty()) {
       for (auto op : {XOR, AND}) {
-        auto gate = tie(cin, p_sum, op);
+        arr<string, 2> keys{cin, p_sum};
+        sort(keys.begin(), keys.end());
+
+        auto gate = tie(keys[0], keys[1], op);
         if (!conn.gates.contains(gate)) {
+          auto [wrong, right] = find_pair(conn, cin, p_sum, op);
+          swaps.insert(wrong);
+          swaps.insert(right);
+
+          auto g1 = conn.outputs.at(wrong);
+          auto g2 = conn.outputs.at(right);
+
+          swap(conn.gates.at(g1), conn.gates.at(g2));
+          cout << "Swapped " << wrong << " with " << right << '\n';
+          for (auto key : {&cin, &c1, &p_sum, &c2, &carry})
+            if (*key == wrong) {
+              *key = right;
+              break;
+            }
+          continue;
         }
         if (op == XOR) {
           sum = conn.gates.at(gate);
-          if (!sum.starts_with('z') or nums<int>(sum)[0] != nums<int>(x)[0])
+          if (!sum.starts_with('z') or nums<int>(sum)[0] != nums<int>(x)[0]) {
+
+            string correct_sum;
+            for (auto z : conn.bits)
+              if (nums<int>(z)[0] == bit_idx) {
+                correct_sum = z;
+                break;
+              }
+
+            auto correct_gate = conn.outputs.at(correct_sum);
+            swap(conn.gates.at(gate), conn.gates.at(correct_gate));
+
+            for (auto key : {&cin, &c1, &p_sum, &c2, &carry})
+              if (*key == correct_sum) {
+                *key = sum;
+                break;
+              }
+
             swaps.insert(sum);
+            swaps.insert(correct_sum);
+            cout << "Swapped " << sum << " with " << correct_sum << '\n';
+          }
         } else if (op == AND) {
           c2 = conn.gates.at(gate);
         }
       }
     }
+    carry = c1;
     if (!c1.empty() and !c2.empty()) {
       GateType op = OR;
-      auto gate = tie(c1, c2, op);
+      arr<string, 2> keys{c1, c2};
+      sort(keys.begin(), keys.end());
+
+      auto gate = tie(keys[0], keys[1], op);
       if (conn.gates.contains(gate)) {
         carry = conn.gates.at(gate);
+      } else {
+        auto [wrong, right] = find_pair(conn, c1, c2, op);
+        swaps.insert(wrong);
+        swaps.insert(right);
+
+        auto g1 = conn.outputs.at(wrong);
+        auto g2 = conn.outputs.at(right);
+
+        for (auto key : {&cin, &c1, &p_sum, &c2, &carry})
+          if (*key == wrong) {
+            *key = right;
+            break;
+          }
+        continue;
+        cout << "Swapped " << wrong << " with " << right << '\n';
+
+        swap(conn.gates.at(g1), conn.gates.at(g2));
       }
     }
     cin = carry;
   }
+  cout << part1(conn) << "=" << to_decimal(conn, 'x') + to_decimal(conn, 'y')
+       << '\n';
   string result = "";
   for (auto key : swaps)
     result += key + ',';
