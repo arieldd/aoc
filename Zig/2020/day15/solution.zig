@@ -18,19 +18,20 @@ pub fn main() !void {
 
 fn solve(allocator: *const Allocator, numbers: []const usize, last_round: usize) !usize {
     var spoken: std.AutoHashMap(usize, usize) = std.AutoHashMap(usize, usize).init(allocator.*);
+    defer spoken.clearAndFree();
 
-    for (numbers, 0..) |number, i| {
-        try spoken.put(number, i + 1);
+    for (numbers, 1..) |number, i| {
+        try spoken.put(number, i);
     }
 
-    var next: usize = numbers[0];
+    var next: usize = 0;
     var round: usize = numbers.len + 1;
 
     while (round < last_round) : (round += 1) {
         const previous = spoken.get(next);
         try spoken.put(next, round);
 
-        next = if (previous != null) round - previous.? else numbers[0];
+        next = if (previous != null) round - previous.? else 0;
     }
     return next;
 }
@@ -52,4 +53,16 @@ fn read_numbers(allocator: *const Allocator, filename: []const u8) !ArrayList(us
     }
 
     return numbers;
+}
+
+test "Part 1" {
+    const test_input = [3]usize{ 3, 2, 1 };
+    const test_result = try solve(&std.testing.allocator, &test_input, 2020);
+    try std.testing.expect(test_result == 438);
+}
+
+test "Part 2" {
+    const test_input = [3]usize{ 1, 3, 2 };
+    const test_result = try solve(&std.testing.allocator, &test_input, 30000000);
+    try std.testing.expect(test_result == 2578);
 }
