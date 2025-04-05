@@ -2,7 +2,6 @@ const std = @import("std");
 const print = std.debug.print;
 
 const input = @embedFile("input.txt");
-const hex = "0123456789ABCDEF";
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
