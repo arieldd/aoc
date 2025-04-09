@@ -1,12 +1,14 @@
+use std::io::stdin;
+
 #[derive(Debug, Clone)]
-pub struct Program {
+pub struct Computer {
     pub memory: Vec<i32>,
     ip: usize,
 }
 
-impl Program {
-    pub fn new(code: &str) -> Self {
-        let instr = code
+impl Computer {
+    pub fn new(program: &str) -> Self {
+        let instr = program
             .split(',')
             .map(|value| {
                 value
@@ -22,41 +24,31 @@ impl Program {
         }
     }
 
-    pub fn run(&mut self) {
+    pub fn run_program(&mut self) {
         loop {
             assert!(
                 self.ip < self.memory.len(),
                 "Instruction pointer was outside of bounds"
             );
-            let opcode = Opcode::from(self.memory[self.ip]);
-            match opcode {
-                Opcode::Add | Opcode::Mult => {
-                    let op1 = self.fetch(self.memory[self.ip + 1]);
-                    let op2 = self.fetch(self.memory[self.ip + 2]);
-                    let dst = self.memory[self.ip + 3];
-
-                    let result = if opcode == Opcode::Add {
-                        op1 + op2
-                    } else {
-                        op1 * op2
-                    };
-                    self.put(result, dst);
-                    self.ip += 4;
+            let instr = self.decode(self.ip);
+            match self.execute(&instr) {
+                Ok(true) => { /* All good, continue */ }
+                Ok(false) =>
+                /*Exit code, stop*/
+                {
+                    break
                 }
-                Opcode::Exit => break,
-                Opcode::Unknown => {
-                    panic!("Oops something went wrong!")
-                }
+                Err(msg) => panic!("{}", msg),
             }
         }
     }
 
-    fn fetch(self: &Program, address: i32) -> i32 {
+    fn fetch(self: &Computer, address: i32) -> i32 {
         let pos: usize = address.try_into().expect("Bad address");
         self.memory[pos]
     }
 
-    fn put(self: &mut Program, value: i32, address: i32) {
+    fn put(self: &mut Computer, value: i32, address: i32) {
         let pos: usize = address.try_into().expect("Bad address");
 
         if pos >= self.memory.len() {
@@ -64,19 +56,137 @@ impl Program {
         }
         self.memory[pos] = value;
     }
+
+    fn decode(self: &Computer, address: usize) -> Instruction {
+        let mut value = self.fetch(address as i32);
+        let op = Opcode::from(value % 100);
+        value /= 100;
+
+        let mut modes = vec![];
+        while value > 0 {
+            modes.push((value % 10) as u8);
+            value /= 10;
+        }
+
+        let mut params = vec![];
+        match op {
+            Opcode::Add | Opcode::Mult | Opcode::LessThan | Opcode::Equals => {
+                for i in 0..2 {
+                    let mode = if i < modes.len() { modes[i] } else { 0 };
+                    let value = self.fetch((address + i + 1).try_into().unwrap());
+                    params.push(match mode {
+                        0 => self.fetch(value),
+                        1 => value,
+                        _ => panic!("Can't park there mate"),
+                    });
+                }
+                params.push(self.fetch((address + 3).try_into().unwrap()));
+            }
+            Opcode::Input | Opcode::Output => {
+                params.push(self.fetch((address + 1).try_into().unwrap()));
+            }
+            Opcode::JmpTrue | Opcode::JmpFalse => {
+                for i in 0..2 {
+                    let mode = if i < modes.len() { modes[i] } else { 0 };
+                    let value = self.fetch((address + i + 1).try_into().unwrap());
+                    params.push(match mode {
+                        0 => self.fetch(value),
+                        1 => value,
+                        _ => panic!("Can't park there mate"),
+                    });
+                }
+            }
+            _ => {}
+        };
+
+        Instruction { op, params }
+    }
+
+    fn execute(self: &mut Computer, instr: &Instruction) -> Result<bool, &str> {
+        let mut jmp = self.ip + instr.params.len() + 1;
+        match instr.op {
+            Opcode::Add | Opcode::Mult => {
+                let op1 = instr.params[0];
+                let op2 = instr.params[1];
+                let dst = instr.params[2];
+
+                let result = if instr.op == Opcode::Add {
+                    op1 + op2
+                } else {
+                    op1 * op2
+                };
+                self.put(result, dst);
+            }
+            Opcode::Input => {
+                println!("Enter a value: ");
+                let mut buff = String::new();
+                match stdin().read_line(&mut buff) {
+                    Ok(_) => {
+                        let value = buff.trim().parse::<i32>().expect("Need a number brotha!");
+                        self.put(value, instr.params[0]);
+                    }
+                    Err(_) => panic!("Couldn't read from input"),
+                }
+            }
+            Opcode::Output => {
+                println!("{}", self.fetch(instr.params[0]));
+            }
+            Opcode::JmpTrue => {
+                if instr.params[0] != 0 {
+                    jmp = instr.params[1] as usize;
+                }
+            }
+            Opcode::JmpFalse => {
+                if instr.params[0] == 0 {
+                    jmp = instr.params[1] as usize;
+                }
+            }
+            Opcode::LessThan => {
+                self.put(
+                    if instr.params[0] < instr.params[1] {
+                        1
+                    } else {
+                        0
+                    },
+                    instr.params[2],
+                );
+            }
+            Opcode::Equals => {
+                self.put(
+                    if instr.params[0] == instr.params[1] {
+                        1
+                    } else {
+                        0
+                    },
+                    instr.params[2],
+                );
+            }
+            Opcode::Exit => return Ok(false),
+            Opcode::Unknown => return Err("hmmmm"),
+        }
+
+        self.ip = jmp;
+
+        return Ok(true);
+    }
 }
 
 #[derive(Debug)]
 struct Instruction {
     op: Opcode,
-    parameters: Vec<i32>,
-    jump: i32,
+    params: Vec<i32>,
 }
 
 #[derive(Debug, PartialEq)]
 enum Opcode {
     Add = 1,
     Mult = 2,
+    Input = 3,
+    Output = 4,
+    JmpTrue = 5,
+    JmpFalse = 6,
+    LessThan = 7,
+    Equals = 8,
     Exit = 99,
     Unknown,
 }
@@ -86,6 +196,12 @@ impl Opcode {
         match value {
             1 => Self::Add,
             2 => Self::Mult,
+            3 => Self::Input,
+            4 => Self::Output,
+            5 => Self::JmpTrue,
+            6 => Self::JmpFalse,
+            7 => Self::LessThan,
+            8 => Self::Equals,
             99 => Self::Exit,
             _ => Self::Unknown,
         }
@@ -98,14 +214,14 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let mut p1 = Program::new("1, 0,0,0 ,99 ");
-        let mut p2 = Program::new("2, 3, 0, 3, 99");
-        let mut p3 = Program::new("2, 4, 4, 5, 99");
-        let mut p4 = Program::new("1, 1, 1, 4, 99, 5, 6, 0, 99");
+        let mut p1 = Computer::new("1, 0,0,0 ,99 ");
+        let mut p2 = Computer::new("2, 3, 0, 3, 99");
+        let mut p3 = Computer::new("2, 4, 4, 5, 99");
+        let mut p4 = Computer::new("1, 1, 1, 4, 99, 5, 6, 0, 99");
 
         [&mut p1, &mut p2, &mut p3, &mut p4]
             .iter_mut()
-            .for_each(|p| p.run());
+            .for_each(|p| p.run_program());
 
         assert_eq!(p1.memory[0], 2, "was {:?}", p1.memory);
         assert_eq!(p2.memory[3], 6);
