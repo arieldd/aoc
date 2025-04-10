@@ -9,7 +9,7 @@ fn main() {
     println!("Part 2: {}", part2(&program, 19690720));
 }
 
-fn part1(program: &Computer) -> i32 {
+fn part1(program: &Computer) -> isize {
     let mut copy = program.clone();
     copy.memory[1] = 12;
     copy.memory[2] = 2;
@@ -18,7 +18,7 @@ fn part1(program: &Computer) -> i32 {
     copy.memory[0]
 }
 
-fn part2(program: &Computer, target: i32) -> i32 {
+fn part2(program: &Computer, target: isize) -> isize {
     for noun in 0..100 {
         for verb in 0..100 {
             let mut copy = program.clone();
