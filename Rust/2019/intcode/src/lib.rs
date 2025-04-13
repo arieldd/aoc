@@ -1,4 +1,4 @@
-use std::io::stdin;
+use std::{slice::Iter, vec};
 
 #[derive(Debug, Clone)]
 pub struct Computer {
@@ -26,19 +26,18 @@ impl Computer {
         }
     }
 
-    pub fn run_program(&mut self) {
+    pub fn run_program(&mut self, io: &mut IntCodeIO) {
         loop {
             assert!(
                 self.ip < self.memory.len(),
                 "Instruction pointer was outside of bounds"
             );
             let instr = self.decode(self.ip);
-            match self.execute(&instr) {
+            match self.execute(&instr, io) {
                 Ok(true) => { /* All good, continue */ }
-                Ok(false) =>
-                /*Exit code, stop*/
-                {
-                    break
+                Ok(false) => {
+                    /*Exit code, stop*/
+                    break;
                 }
                 Err(msg) => panic!("{}", msg),
             }
@@ -125,7 +124,7 @@ impl Computer {
         Instruction { op, params }
     }
 
-    fn execute(self: &mut Computer, instr: &Instruction) -> Result<bool, &str> {
+    fn execute(self: &mut Computer, instr: &Instruction, io: &mut IntCodeIO) -> Result<bool, &str> {
         let mut jmp = self.ip + instr.params.len() + 1;
         match instr.op {
             Opcode::Add | Opcode::Mult => {
@@ -141,18 +140,11 @@ impl Computer {
                 self.put(result, dst);
             }
             Opcode::Input => {
-                println!("Enter a value: ");
-                let mut buff = String::new();
-                match stdin().read_line(&mut buff) {
-                    Ok(_) => {
-                        let value = buff.trim().parse::<isize>().expect("Need a number brotha!");
-                        self.put(value, instr.params[0]);
-                    }
-                    Err(_) => panic!("Couldn't read from input"),
-                }
+                let value = io.next_arg();
+                self.put(value, instr.params[0]);
             }
             Opcode::Output => {
-                println!("{}", instr.params[0]);
+                io.stdout.push(instr.params[0]);
             }
             Opcode::JmpTrue => {
                 if instr.params[0] != 0 {
@@ -194,6 +186,34 @@ impl Computer {
         self.ip = jmp;
 
         return Ok(true);
+    }
+}
+
+#[derive(Debug)]
+pub struct IntCodeIO<'a> {
+    stdin: Iter<'a, isize>,
+    stdout: Vec<isize>,
+}
+
+impl<'a> IntCodeIO<'a> {
+    pub fn new(args: &'a [isize]) -> Self {
+        Self {
+            stdin: args.iter(),
+            stdout: vec![],
+        }
+    }
+}
+
+impl IntCodeIO<'_> {
+    fn next_arg(self: &mut Self) -> isize {
+        match self.stdin.next() {
+            Some(arg) => *arg,
+            _ => panic!("No fucks left to give"),
+        }
+    }
+
+    pub fn output(self: &Self) -> &[isize] {
+        &self.stdout
     }
 }
 
@@ -247,9 +267,12 @@ mod tests {
         let mut p3 = Computer::new("2, 4, 4, 5, 99");
         let mut p4 = Computer::new("1, 1, 1, 4, 99, 5, 6, 0, 99");
 
+        let args = vec![0];
+        let mut io = IntCodeIO::new(&args);
+
         [&mut p1, &mut p2, &mut p3, &mut p4]
             .iter_mut()
-            .for_each(|p| p.run_program());
+            .for_each(|p| p.run_program(&mut io));
 
         assert_eq!(p1.memory[0], 2, "was {:?}", p1.memory);
         assert_eq!(p2.memory[3], 6);
@@ -259,11 +282,13 @@ mod tests {
 
     #[test]
     fn day9() {
+        let args = vec![0];
+        let mut io = IntCodeIO::new(&args);
         let mut p1 = Computer::new("109,1,204,-1,1001,100,1,100,1008,100,16,101,1006,101,0,99");
-        p1.run_program();
+        p1.run_program(&mut io);
 
         let mut p2 = Computer::new("1102,34915192,34915192,7,4,7,99,0");
-        p2.run_program();
+        p2.run_program(&mut io);
         assert!(true);
     }
 }
