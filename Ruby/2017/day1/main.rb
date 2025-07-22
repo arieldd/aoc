@@ -4,7 +4,7 @@ def captcha(text, step)
   last = text.size - 1
 
   sum = 0
-  for i in 0..last do
+  for i in 0..last
     j = (i + step) % last
     d1 = text[i].to_i
     d2 = text[j].to_i
@@ -15,6 +15,6 @@ def captcha(text, step)
 end
 
 input.each do |line|
-  puts captcha(line, 1)
-  puts captcha(line, line.size / 2)
+  puts(captcha(line, 1))
+  puts(captcha(line, line.size / 2))
 end
