@@ -46,14 +46,16 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
+static const int pow10[] = {1, 10, 100, 1000, 10000, 100000, 1000000, 10000000};
 void solve(ll lower, ll upper, ll *p1, ll *p2) {
   char digits[20];
   int length;
 
   for (ll current = lower; current <= upper; current++) {
     length = to_digits(current, digits);
-    if (length % 2 == 0 && is_invalid(current, digits, length, length / 2)) {
-      *p1 += current;
+    int half = length / 2;
+    if (length % 2 == 0 && current / pow10[half] == current % pow10[half]) {
+        *p1 += current;
     }
 
     if (is_invalid(current, digits, length, 1)) {
