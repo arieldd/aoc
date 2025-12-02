@@ -2,10 +2,8 @@
 
 #define ll long long
 
-ll add_invalids(ll lower, ll upper, char (*is_invalid)(ll));
-
-char is_invalid_1(ll value);
-char is_invalid_2(ll value);
+void solve(ll lower, ll upper, ll *p1, ll *p2);
+char is_invalid(ll value, char digits[], int length, int size);
 
 int to_digits(ll value, char *buffer);
 ll from_digits(char *buffer, int length);
@@ -29,9 +27,8 @@ int main(int argc, char *argv[]) {
     case ',':
     case '\n': {
       upper = value;
+      solve(lower, upper, &p1, &p2);
       value = 0;
-      p1 += add_invalids(lower, upper, is_invalid_1);
-      p2 += add_invalids(lower, upper, is_invalid_2);
       break;
     }
     default:
@@ -49,37 +46,27 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-ll add_invalids(ll lower, ll upper, char (*is_invalid)(ll)) {
-  ll invalids = 0;
+void solve(ll lower, ll upper, ll *p1, ll *p2) {
+  char digits[20];
+  int length;
+
   for (ll current = lower; current <= upper; current++) {
-    if (is_invalid(current)) {
-      invalids += current;
+    length = to_digits(current, digits);
+    if (length % 2 == 0 && is_invalid(current, digits, length, length / 2)) {
+      *p1 += current;
+    }
+
+    if (is_invalid(current, digits, length, 1)) {
+      *p2 += current;
     }
   }
-  return invalids;
 }
 
-char is_invalid_1(ll value) {
-  char buffer[20];
-  int length = to_digits(value, buffer);
-  if (length % 2)
-    return 0;
+char is_invalid(ll valuee, char digits[], int length, int size) {
   int half = length / 2;
 
-  for (int i = 0; i < half; i++) {
-    if (buffer[length - 1 - i] != buffer[half - 1 - i])
-      return 0;
-  }
-  return 1;
-}
-
-char is_invalid_2(ll value) {
-  char buffer[20];
-  int length = to_digits(value, buffer), half = length / 2;
-
-  int size = 1;
   while (size <= half) {
-    ll pattern = from_digits(buffer + length - size, size);
+    ll pattern = from_digits(digits + length - size, size);
 
     char invalid = 1;
     for (int i = size; i < length; i += size) {
@@ -87,7 +74,7 @@ char is_invalid_2(ll value) {
         invalid = 0;
         break;
       }
-      ll next = from_digits(buffer + length - size - i, size);
+      ll next = from_digits(digits + length - size - i, size);
       if (pattern != next) {
         invalid = 0;
         break;
