@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #define ll long long
+#define ROW_SIZE 100
 
 ll max_jolt(str *bank);
 ll max_jolt_rec(str *bank, int batteries, int index, ll cache[]);
@@ -14,27 +15,41 @@ int main(int argc, char *argv[]) {
   }
 
   str bank;
-  str_init(&bank, 100);
+  str_init(&bank, ROW_SIZE);
 
-  ll cache[10000];
+  /*
+   * We need a cache by number of batteries and position.
+   *
+   *                      Position
+   *          ---------------------------------
+   *          | 0 | 1 | 2 | ... | 98 | 99 |
+   *          ---------------------------------
+   *          |   |   |   | ... |    |    |
+   * Batteries| 0 |   |   | ... |    |    |
+   *          ---------------------------------
+   *          |   |   |   | ... |    |    |
+   *          | . |   |   | ... |    |    |
+   *          | . |   |   | ... |    |    |
+   *          | . |   |   | ... |    |    |
+   *          |   |   |   | ... |    |    |
+   *          | 12|   |   | ... |    |    |
+   *          ---------------------------------
+   */
+  ll cache[ROW_SIZE * 13];
+  size_t cache_size = sizeof(cache);
 
-  ll p1 = 0, p2;
+  ll p1, p2;
 
   FILE *f = fopen(argv[1], "r+");
   int ch;
   while ((ch = getc(f)) != EOF) {
     switch (ch) {
     case '\n': {
-      for (int i = 0; i < bank.count; i++) {
-        printf("%d", bank.items[i]);
-      }
-      printf("\n");
-      memset(cache, 0, 10000 * sizeof(ll));
-      ll j1 = max_jolt_rec(&bank, 2, 0, &cache);
-      memset(cache, 0, 1200 * sizeof(ll));
-      ll j2 = max_jolt_rec(&bank, 12, 0, &cache);
+      memset(cache, 0, cache_size);
+      ll j1 = max_jolt_rec(&bank, 2, 0, cache);
+      memset(cache, 0, cache_size);
+      ll j2 = max_jolt_rec(&bank, 12, 0, cache);
 
-      printf("j1: %lld, j2: %lld\n", j1, j2);
       p1 += j1;
       p2 += j2;
       str_clear(&bank);
@@ -51,6 +66,30 @@ int main(int argc, char *argv[]) {
   printf("Part 1: %lld\n", p2);
 
   return 0;
+}
+
+static ll pow10[] = {
+    1,           10,           100,          1000,      10000,
+    100000,      1000000,      10000000,     100000000, 1000000000,
+    10000000000, 100000000000, 1000000000000};
+
+ll max_jolt_rec(str *bank, int batteries, int index, ll cache[]) {
+  if (!batteries || batteries > bank->count - index) {
+    return 0;
+  }
+
+  int key = batteries * ROW_SIZE + index;
+  if (cache[key]) {
+    return cache[key];
+  }
+
+  ll jolt_with = (ll)bank->items[index] * pow10[batteries - 1] +
+                 max_jolt_rec(bank, batteries - 1, index + 1, cache),
+     jolt_without = max_jolt_rec(bank, batteries, index + 1, cache);
+
+  cache[key] = (jolt_with > jolt_without) ? jolt_with : jolt_without;
+
+  return cache[key];
 }
 
 // Keeping it around for the record :D
@@ -80,29 +119,4 @@ ll max_jolt(str *bank) {
     }
   }
   return (i1 < i2) ? m1 * 10 + m2 : m2 * 10 + m1;
-}
-
-static ll pow10[] = {
-    1,           10,           100,          1000,      10000,
-    100000,      1000000,      10000000,     100000000, 1000000000,
-    10000000000, 100000000000, 1000000000000};
-
-ll max_jolt_rec(str *bank, int batteries, int index, ll cache[]) {
-  int key = batteries * 100 + index;
-  // printf("On %d with %d batteries key is %d\n", index, batteries, key);
-  if (cache[key])
-    return cache[key];
-
-  if (!batteries || batteries > bank->count - index) {
-    cache[key] = 0;
-    return 0;
-  }
-
-  ll jolt_with = (ll)bank->items[index] * pow10[batteries - 1] +
-                 max_jolt_rec(bank, batteries - 1, index + 1, cache),
-     jolt_without = max_jolt_rec(bank, batteries, index + 1, cache);
-
-  cache[key] = (jolt_with > jolt_without) ? jolt_with : jolt_without;
-
-  return cache[key];
 }
