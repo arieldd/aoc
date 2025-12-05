@@ -73,7 +73,7 @@
   }
 
 #define EQ_CMP(type, name)                                                     \
-  char cmp_##name(type e1, type e2) { return e1 == e2; };
+  static inline char cmp_##name(type e1, type e2) { return e1 == e2; };
 
 EQ_CMP(int, i);
 EQ_CMP(long, l);
