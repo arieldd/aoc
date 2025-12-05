@@ -94,9 +94,9 @@ ll max_jolt_rec(str *bank, int batteries, int index, ll cache[]) {
 
 // Keeping it around for the record :D
 ll max_jolt(str *bank) {
-  int m1 = str_at(bank, 0), m2 = str_at(bank, 1), i1 = 0, i2 = 1;
+  int m1 = bank->items[0], m2 = bank->items[1], i1 = 0, i2 = 1;
   for (int i = 1; i < bank->count; i++) {
-    int current = str_at(bank, i);
+    int current = bank->items[i];
     if (current > m1) {
       m2 = m1;
       i2 = i1;
@@ -109,9 +109,9 @@ ll max_jolt(str *bank) {
   }
   // Find largest to the right
   if (i1 < bank->count - 1) {
-    m2 = str_at(bank, i1 + 1), i2 = i1 + 1;
+    m2 = bank->items[i1 + 1], i2 = i1 + 1;
     for (int i = i1 + 1; i < bank->count; i++) {
-      int current = str_at(bank, i);
+      int current = bank->items[i];
       if (current > m2) {
         m2 = current;
         i2 = i;
