@@ -3,7 +3,7 @@
 
 #define ll long long
 
-int count_splits(str *grid, int columns, int start, vi *visited);
+int count_splits(str *grid, int columns, int start, str *visited);
 ll count_timelines(str *grid, int columns, int start, vll *cache);
 
 int main(int argc, char *argv[]) {
@@ -12,12 +12,17 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  FILE *f = fopen(argv[1], "r+");
+  if (f == NULL) {
+    printf("Input file not found");
+    return 1;
+  }
+
   str grid;
   str_init(&grid, 1000);
 
   int columns = 0, start = 0, counting_columns = 1;
 
-  FILE *f = fopen(argv[1], "r+");
   int ch;
   while ((ch = getc(f)) != EOF) {
     switch (ch) {
@@ -37,10 +42,10 @@ int main(int argc, char *argv[]) {
   }
   fclose(f);
 
-  vi visited;
-  vi_init(&visited, grid.count);
+  str visited;
+  str_init(&visited, grid.count);
   int p1 = count_splits(&grid, columns, start, &visited);
-  vi_free(&visited);
+  str_free(&visited);
 
   vll cache;
   vll_init(&cache, grid.count);
@@ -55,14 +60,14 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-int count_splits(str *grid, int columns, int start, vi *visited) {
+int count_splits(str *grid, int columns, int start, str *visited) {
   if (visited->items[start])
     return 0;
 
   visited->items[start] = 1;
   int splits = 0;
 
-  while (1) {
+  for (;;) {
     start += columns;
     if (start >= grid->count) // Beam exited
       return 0;
@@ -89,7 +94,7 @@ int count_splits(str *grid, int columns, int start, vi *visited) {
 }
 
 ll count_timelines(str *grid, int columns, int start, vll *cache) {
-  while (1) {
+  for (;;) {
     start += columns;
     if (start >= grid->count) // Beam exited
       return 1;
