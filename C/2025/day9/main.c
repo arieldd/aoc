@@ -135,11 +135,29 @@ bool is_valid_rect(Floor *map, Point a, Point b) {
   // Find corners
   Point c = (Point){a.x, b.y}, //
       d = (Point){b.x, a.y};
-  // printf("{%ld, %ld} and {%ld, %ld} with corners {%ld, %ld} and {%ld, %ld} ",
-  //        a.y + 1, a.x + 1, b.y + 1, b.x + 1, c.y + 1, c.x + 1, d.y + 1,
-  //        d.x + 1);
 
-  return contains(map, c) && contains(map, d);
+  // a to c
+  for(int y = MIN(a.y, b.y); y <= MAX(a.y, b.y); y++)
+        if(!contains(map, (Point){a.x, y}))
+            return 0;
+
+  // a to d
+  for(int x = MIN(a.x, b.x); x <= MAX(a.x, b.x); x++)
+        if(!contains(map, (Point){x, a.y}))
+            return 0;
+  
+
+  // b to d
+  for(int y = MIN(a.y, b.y); y <= MAX(a.y, b.y); y++)
+        if(!contains(map, (Point){b.x, y}))
+            return 0;
+
+  // b to c
+  for(int x = MIN(a.x, b.x); x <= MAX(a.x, b.x); x++)
+        if(!contains(map, (Point){x, b.y}))
+            return 0;
+
+  return 1;
 }
 
 bool contains(Floor *map, Point p) { return floor_at(map, p.x, p.y); }
@@ -179,32 +197,6 @@ void fill_map(vp *red_tiles, Floor *map) {
     }
   }
 }
-
-// bool is_in_shape(Floor *map, Point p) {
-//   int crosses = 0;
-//   if (contains(map, p))
-//     return 1;
-//
-//   long max_x = map->x_offset + map->columns;
-//   for (int x = p.x; x <= max_x; x++) {
-//     Point next = {x, p.y};
-//     if (contains(map, next)) {
-//       crosses++;
-//       // Ignore same edge collisions
-//       bool edge = 0;
-//       for (;;) {
-//         next.x += 1;
-//         if (!contains(map, next))
-//           break;
-//         edge = 1;
-//         x++;
-//       }
-//       if (edge)
-//         crosses++;
-//     }
-//   }
-//   return crosses % 2;
-// }
 
 void bounding_rect(vp *tiles, Point bounds[2]) {
   Point *top_left = &bounds[0], *bottom_right = &bounds[1];
