@@ -7,6 +7,9 @@ typedef struct {
   long x;
   long y;
   long z;
+  // For connecting
+  int pos;
+  long set;
 } JBox;
 
 static inline char eq_j(JBox j1, JBox j2) {
@@ -24,35 +27,22 @@ static inline double dist(JBox j1, JBox j2) {
 DECLARE_VECTOR_TYPE(JBox, vj, eq_j)
 
 typedef struct {
-  JBox j1;
-  JBox j2;
+  int i1, i2;
   double dist;
 } Conn;
 
 static inline char eq_conn(Conn c1, Conn c2) {
-  return (eq_j(c1.j1, c2.j1) && eq_j(c1.j2, c2.j2)) ||
-         (eq_j(c1.j1, c2.j2) && eq_j(c1.j2, c2.j1));
+  return (c1.i1 == c2.i1 && c1.i2 == c2.i2) ||
+         (c1.i1 == c2.i2 && c1.i2 == c2.i1);
+}
+DECLARE_VECTOR_TYPE(Conn, vcon, eq_conn)
+
+int cmp_size(const void *s1, const void *s2) {
+  return (*(long *)s2) - (*(long *)s1);
 }
 
 int cmp_conn(const void *c1, const void *c2) {
   return ((Conn *)c1)->dist - ((Conn *)c2)->dist;
-}
-
-DECLARE_VECTOR_TYPE(Conn, vcon, eq_conn)
-
-static inline char eq_vvj(vj c1, vj c2) { return c1.items == c2.items; };
-DECLARE_VECTOR_TYPE(vj, vvj, eq_vvj);
-
-int cmp_circuit(const void *c1, const void *c2) {
-  return ((vvj *)c2)->count - ((vvj *)c1)->count; // Descending
-}
-
-char contains(vj *circuit, JBox *box) {
-  for (int i = 0; i < circuit->count; i++) {
-    if (eq_j(circuit->items[i], *box))
-      return 1;
-  }
-  return 0;
 }
 
 void solve(vj *boxes, long *p1, long *p2);
@@ -79,6 +69,8 @@ int main(int argc, char *argv[]) {
     switch (ch) {
     case '\n':
       next.z = value;
+      next.pos = boxes.count;
+      next.set = -1;
       vj_append(&boxes, next);
       index = 0;
       value = 0;
@@ -99,50 +91,13 @@ int main(int argc, char *argv[]) {
   }
   fclose(f);
 
-  long p1;
-  long p2;
+  long p1, p2;
   solve(&boxes, &p1, &p2);
   printf("Part 1: %ld\n", p1);
   printf("Part 2: %ld\n", p2);
 
   vj_free(&boxes);
   return 0;
-}
-
-void print_circuit(vj *c) {
-  printf("{");
-  for (int i = 0; i < c->count; i++) {
-    JBox box = c->items[i];
-    printf(" {%ld, %ld, %ld} ", box.x, box.y, box.z);
-  }
-  printf("} : %zu\n", c->count);
-}
-
-void merge_circuits(vvj *circuits) {
-  for (int i = 0; i < circuits->count; i++) {
-    vj *c1 = &circuits->items[i];
-    char merged = 0;
-    for (int j = i + 1; j < circuits->count; j++) {
-      vj *c2 = &circuits->items[j];
-      for (int k = 0; k < c2->count; k++) {
-        if (contains(c1, &c2->items[k])) {
-          for (int l = 0; l < c2->count; l++) {
-            if (!contains(c1, &c2->items[l])) {
-              vj_append(c1, c2->items[l]);
-            }
-          }
-          vvj_remove_at(circuits, j);
-
-          merged = 1;
-          break;
-        }
-      }
-      if (merged)
-        break;
-    }
-    if (merged)
-      i--; // Check this one again
-  }
 }
 
 void solve(vj *boxes, long *p1, long *p2) {
@@ -153,63 +108,58 @@ void solve(vj *boxes, long *p1, long *p2) {
     for (int j = i + 1; j < boxes->count; j++) {
       JBox j1 = boxes->items[i], j2 = boxes->items[j];
       vcon_append(&connections,
-                  (Conn){.j1 = j1, .j2 = j2, .dist = dist(j1, j2)});
+                  (Conn){.i1 = j1.pos, .i2 = j2.pos, .dist = dist(j1, j2)});
     }
   }
   qsort(connections.items, connections.count, sizeof(Conn), cmp_conn);
 
-  // Build circuits and merge them
-  vvj circuits;
-  vvj_init(&circuits, connections.count);
+  long set_id = 0;
   for (int i = 0;; i++) {
     Conn next = connections.items[i];
-    char found = 0;
-    for (int j = 0; j < circuits.count; j++) {
-      vj *circuit = &circuits.items[j];
-      char c1 = contains(circuit, &next.j1), c2 = contains(circuit, &next.j2);
-      if (c1 && !c2) {
-        vj_append(circuit, next.j2);
-        found++;
-        break;
+    JBox *j1 = &boxes->items[next.i1], *j2 = &boxes->items[next.i2];
+    if (j1->set == -1 && j2->set != -1) {
+      j1->set = j2->set;
+    } else if (j1->set != -1 && j2->set == -1) {
+      j2->set = j1->set;
+    } else {
+      set_id++;
+      if (j1->set != j2->set) {
+        long s1 = j1->set, s2 = j2->set;
+        for (int i = 0; i < boxes->count; i++) {
+          if (boxes->items[i].set == s1 || boxes->items[i].set == s2) {
+            boxes->items[i].set = set_id;
+          }
+        }
+      } else if (j1->set == -1 && j2->set == -1) {
+        j1->set = set_id;
+        j2->set = set_id;
+      }
+    }
+
+    if (i == 999) { // Part 1 1000 connections
+      long *sizes = calloc(set_id + 1, sizeof(long));
+      for (int k = 0; k < boxes->count; k++) {
+        JBox *current = &boxes->items[k];
+        if (current->set != -1)
+          sizes[current->set]++;
       }
 
-      if (c2 && !c1) {
-        vj_append(circuit, next.j1);
-        found++;
-      }
+      qsort(sizes, set_id + 1, sizeof(long), cmp_size);
+      *p1 = sizes[0] * sizes[1] * sizes[2];
+      free(sizes);
+    }
 
-      if (c1 && c2) {
-        found = 1;
+    char full_set = 1;
+    long last_set = boxes->items[0].set;
+    for (int i = 1; i < boxes->count; i++) {
+      if (boxes->items[i].set != last_set) {
+        full_set = 0;
         break;
       }
-
-      if (found > 1)
-        break;
     }
-    if (!found) {
-      vj new_circuit;
-      vj_init(&new_circuit, 100);
-      vj_append(&new_circuit, next.j1);
-      vj_append(&new_circuit, next.j2);
-
-      vvj_append(&circuits, new_circuit);
-    }
-    merge_circuits(&circuits);
-    if (i == 999 /* P1 1000 cycles */) {
-      qsort(circuits.items, circuits.count, sizeof(vj), cmp_circuit);
-      *p1 = circuits.items[0].count * circuits.items[1].count *
-            circuits.items[2].count;
-    }
-    if (circuits.items[0].count == boxes->count) {
-      *p2 = next.j1.x * next.j2.x;
-      break;
+    if (full_set) {
+      *p2 = j1->x * j2->x;
+      return;
     }
   }
-
-  for (int i = 0; i < circuits.count; i++) {
-    vj_free(&circuits.items[i]);
-  }
-
-  vvj_free(&circuits);
-  vcon_free(&connections);
 }
