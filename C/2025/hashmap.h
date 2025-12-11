@@ -32,6 +32,12 @@ HashMap *hm_create(size_t size, int (*eq)(void *, void *),
   return map;
 }
 
+void hm_clear(HashMap *map) {
+  for (size_t i = 0; i < map->size; i++) {
+    vkv_clear(&map->buckets[i]);
+  }
+}
+
 char hm_insert(HashMap *map, void *key, void *value) {
   long index = map->hash(key) % map->size;
   vkv *bucket = &map->buckets[index];
