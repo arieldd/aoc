@@ -8,6 +8,7 @@
 
 typedef struct {
   long x, y;
+  int pos;
 } Point;
 
 static inline char eq_point(Point a, Point b) {
@@ -16,28 +17,13 @@ static inline char eq_point(Point a, Point b) {
 
 DECLARE_VECTOR_TYPE(Point, vp, eq_point)
 
-typedef struct {
-  bool *grid;
-  long rows, columns, y_offset, x_offset;
-} Floor;
-
-void floor_set(Floor *map, long x, long y, bool value) {
-  map->grid[(y - map->y_offset) * map->columns + (x - map->x_offset)] = value;
-}
-
-bool floor_at(Floor *map, long x, long y) {
-  return map->grid[(y - map->y_offset) * map->columns + (x - map->x_offset)];
-}
-
 static inline long rect_area(Point a, Point b) {
   return (labs(a.x - b.x) + 1) * (labs(a.y - b.y) + 1);
 }
 
-void bounding_rect(vp *tiles, Point bounds[2]);
-void fill_map(vp *red_tiles, Floor *map);
-bool is_valid_rect(Floor *map, Point a, Point b);
-// bool is_in_shape(Floor *map, Point p);
-bool contains(Floor *map, Point p);
+// Can we draw a straight line without intersecting the pattern
+bool straight_line(vp *tiles, Point from, Point to);
+bool is_valid_rect(vp *tiles, Point a, Point b);
 
 void solve(vp *tiles, long *p1, long *p2);
 
@@ -67,6 +53,7 @@ int main(int argc, char *argv[]) {
       break;
     case '\n':
       next.y = value;
+      next.pos = tiles.count;
       vp_append(&tiles, next);
       value = 0;
       break;
@@ -88,124 +75,56 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-void draw_perimeter(Floor *map) {
-  for (int y = 0; y < map->rows; y++) {
-    for (int x = 0; x < map->columns; x++) {
-      if (contains(map, (Point){x, y}))
-        printf("X");
-      else
-        printf(".");
-    }
-
-    printf("\n");
-  }
-}
-
 void solve(vp *tiles, long *p1, long *p2) {
-  Point bounds[2] = {0};
-  bounding_rect(tiles, bounds);
-  long bounding_area = rect_area(bounds[0], bounds[1]);
-
-  Floor map = {0};
-  map.grid = calloc(bounding_area, sizeof(bool));
-  map.rows = bounds[1].y - bounds[0].y + 1;
-  map.columns = bounds[1].x - bounds[0].x + 1;
-  map.y_offset = bounds[0].y;
-  map.x_offset = bounds[0].x;
-
-  fill_map(tiles, &map);
-  // draw_perimeter(&map);
-
   for (int i = 0; i < tiles->count - 1; i++) {
     Point a = tiles->items[i];
     for (int j = i + 1; j < tiles->count - 1; j++) {
       Point b = tiles->items[j];
 
       long area = rect_area(a, b);
-      // printf("have area %ld\n", rg_area);
       *p1 = MAX(*p1, area);
-      if (is_valid_rect(&map, a, b)) {
+      if (is_valid_rect(tiles, a, b)) {
         *p2 = MAX(*p2, area);
       }
     }
   }
 }
 
-bool is_valid_rect(Floor *map, Point a, Point b) {
+bool is_valid_rect(vp *tiles, Point a, Point b) {
   // Find corners
   Point c = (Point){a.x, b.y}, //
       d = (Point){b.x, a.y};
 
-  // a to c
-  for(int y = MIN(a.y, b.y); y <= MAX(a.y, b.y); y++)
-        if(!contains(map, (Point){a.x, y}))
-            return 0;
-
-  // a to d
-  for(int x = MIN(a.x, b.x); x <= MAX(a.x, b.x); x++)
-        if(!contains(map, (Point){x, a.y}))
-            return 0;
-  
-
-  // b to d
-  for(int y = MIN(a.y, b.y); y <= MAX(a.y, b.y); y++)
-        if(!contains(map, (Point){b.x, y}))
-            return 0;
-
-  // b to c
-  for(int x = MIN(a.x, b.x); x <= MAX(a.x, b.x); x++)
-        if(!contains(map, (Point){x, b.y}))
-            return 0;
+  if (!straight_line(tiles, a, c) || !straight_line(tiles, a, d) ||
+      !straight_line(tiles, b, c) || !straight_line(tiles, b, d))
+    return 0;
 
   return 1;
 }
 
-bool contains(Floor *map, Point p) { return floor_at(map, p.x, p.y); }
+bool straight_line(vp *tiles, Point from, Point to) {
+  long min_x = MIN(from.x, to.x), //
+      min_y = MIN(from.y, to.y),  //
+      max_x = MAX(from.x, to.x),  //
+      max_y = MAX(from.y, to.y);
 
-void fill_map(vp *red_tiles, Floor *map) {
-  // Perimeter
-  for (int i = 0; i < red_tiles->count; i++) {
-    Point a = red_tiles->items[i];
-    Point b = red_tiles->items[(i + 1) % red_tiles->count];
-    if (a.x == b.x) {
-      for (long y = MIN(a.y, b.y); y <= MAX(a.y, b.y); y++) {
-        floor_set(map, a.x, y, 1);
-      }
+  for (int i = 0; i < tiles->count; i++) {
+    Point p1 = tiles->items[i], p2 = tiles->items[(i + 1) % tiles->count];
+    if (from.x == to.x) {
+      if (p1.x == p2.x)
+        continue; // parallel
+      if ((min_y < p1.y && p1.y < max_y) &&
+          ((p1.x <= from.x && from.x <= p2.x) ||
+           (p2.x <= from.x && from.x <= p1.x)))
+        return 0;
     } else {
-      for (long x = MIN(a.x, b.x); x <= MAX(a.x, b.x); x++) {
-        floor_set(map, x, a.y, 1);
-      }
+      if (p1.y == p2.y)
+        continue; // parallel
+      if ((min_x < p1.x && p1.x < max_x) &&
+          ((p1.y <= from.y && from.y <= p2.y) ||
+           (p2.y <= from.y && from.y <= p1.y)))
+        return 0;
     }
   }
-
-  for (int i = 2; i < map->rows - 1; i++) {
-    bool in = 0;
-    for (int j = 0; j < map->columns; j++) {
-      bool tile = map->grid[i * map->columns + j];
-      bool valid = tile;
-      while (tile) {
-        j++;
-        tile = map->grid[i * map->columns + j];
-      }
-
-      if (valid) {
-        in = !in;
-        j--;
-      } else if (!valid && in) {
-        map->grid[i * map->columns + j] = 1;
-      }
-    }
-  }
-}
-
-void bounding_rect(vp *tiles, Point bounds[2]) {
-  Point *top_left = &bounds[0], *bottom_right = &bounds[1];
-  for (int i = 1; i < tiles->count; i++) {
-    Point next = tiles->items[i];
-    top_left->x = MIN(next.x, top_left->x);
-    top_left->y = MIN(next.y, top_left->y);
-
-    bottom_right->x = MAX(next.x, bottom_right->x);
-    bottom_right->y = MAX(next.y, bottom_right->y);
-  }
+  return 1;
 }
