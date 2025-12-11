@@ -13,14 +13,12 @@ DECLARE_VECTOR_TYPE(char *, vtuple, cmp_tuple)
 typedef struct Node {
   char label[3];
   vtuple outputs;
-  ll paths, trouble_paths;
 } Node;
 
 Node *create_node() {
   Node *node = malloc(sizeof(Node));
   vtuple_init(&node->outputs, 10);
-  node->paths = -1;
-  node->trouble_paths = -1;
+
   return node;
 }
 
@@ -46,8 +44,8 @@ static inline long str_hash(void *k) {
   return hashed;
 }
 
-ll count_paths(HashMap *graph, char *from);
-ll count_trouble_paths(HashMap *graph, char *from, char dac, char fft);
+ll count_paths(HashMap *graph, char *from, char *to, HashMap *cache);
+ll count_trouble_paths(HashMap *graph);
 
 int main(int argc, char *argv[]) {
   if (argc < 2) {
@@ -99,59 +97,60 @@ int main(int argc, char *argv[]) {
   }
   fclose(f);
 
-  ll p1 = count_paths(graph, "you"), //
-      p2 = count_trouble_paths(graph, "svr", 0, 0);
+  HashMap *cache = hm_create(graph->size, eq_key, str_hash);
+  ll p1 = count_paths(graph, "you", "out", cache);
+  ll p2 = count_trouble_paths(graph);
+
   printf("Part 1: %lld\n", p1);
   printf("Part 2: %lld\n", p2);
 
+  free(cache);
+  free(graph);
   return 0;
 }
 
-ll count_paths(HashMap *graph, char *from) {
-  if (eq_key(from, "out"))
+ll count_paths(HashMap *graph, char *current, char *to, HashMap *cache) {
+  if (eq_key(current, to)) {
     return 1;
-
-  Node *node = hm_at(graph, from);
+  }
+  Node *node = hm_at(graph, current);
   if (!node)
     return 0; // This label goes nowhere
 
-  if (node->paths != -1)
-    return node->paths;
-
-  long paths = 0;
-  for (int i = 0; i < node->outputs.count; i++) {
-    paths += count_paths(graph, node->outputs.items[i]);
+  if (hm_contains(cache, current)) {
+    ll cached = *((ll *)hm_at(cache, current));
+    return cached;
   }
 
-  node->paths = paths;
-  return paths;
+  ll *paths = malloc(sizeof(ll));
+  *paths = 0;
+  for (int i = 0; i < node->outputs.count; i++) {
+    char *label = node->outputs.items[i];
+    *paths += count_paths(graph, label, to, cache);
+  }
+
+  hm_insert(cache, current, paths);
+  return *paths;
 }
 
-ll count_trouble_paths(HashMap *graph, char *from, char dac, char fft) {
-  if (eq_key(from, "out")) {
-    return 1 && dac && fft;
-  }
+ll count_trouble_paths(HashMap *graph) {
+  HashMap *cache = hm_create(graph->size, eq_key, str_hash);
+  ll svr_dac = count_paths(graph, "svr", "dac", cache);
 
-  if (eq_key(from, "dac"))
-    dac = 1;
+  hm_clear(cache);
+  ll svr_fft = count_paths(graph, "svr", "fft", cache);
 
-  if (eq_key(from, "fft"))
-    fft = 1;
+  hm_clear(cache);
+  ll fft_dac = count_paths(graph, "fft", "dac", cache);
 
-  Node *node = hm_at(graph, from);
-  if (!node)
-    return 0; // This label goes nowhere
+  hm_clear(cache);
+  ll dac_fft = count_paths(graph, "dac", "fft", cache);
 
-  if (node->trouble_paths != -1)
-    return node->trouble_paths;
+  hm_clear(cache);
+  ll dac_out = count_paths(graph, "dac", "out", cache);
 
-  ll paths = 0;
-  for (int i = 0; i < node->outputs.count; i++) {
-    char *next = node->outputs.items[i];
-    paths += count_trouble_paths(graph, next, dac, fft);
-  }
+  hm_clear(cache);
+  ll fft_out = count_paths(graph, "fft", "out", cache);
 
-  printf("%s has %lld\n", from, paths);
-  node->trouble_paths = paths;
-  return paths;
+  return svr_dac * dac_fft * fft_out + svr_fft * fft_dac * dac_out;
 }
