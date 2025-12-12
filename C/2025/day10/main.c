@@ -1,6 +1,8 @@
 #include "../vectors.h"
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define ll long long
@@ -8,7 +10,7 @@
 
 #define MIN(x, y) ((x) < (y)) ? (x) : (y)
 
-static inline char eq_switch(vi *a, vi *b) {
+static inline char eq_vi(vi *a, vi *b) {
   if (a->count != b->count)
     return 0;
   for (int i = 0; i < a->count; i++) {
@@ -18,7 +20,7 @@ static inline char eq_switch(vi *a, vi *b) {
   return 1;
 }
 
-DECLARE_VECTOR_TYPE(vi *, vvi, eq_switch)
+DECLARE_VECTOR_TYPE(vi *, vvi, eq_vi)
 
 typedef struct {
   str *lights;
@@ -29,16 +31,22 @@ typedef struct {
 
 static inline char eq_machine(Machine a, Machine b) { return a.pos == b.pos; }
 
+static inline int cmp_vi(const void *a, const void *b) { // For sorting buttons
+  const vi **v1 = (const vi **)a, **v2 = (const vi **)b;
+  return (*v2)->count - (*v1)->count;
+}
+
 DECLARE_VECTOR_TYPE(Machine, vm, eq_machine)
+
+int eq_key(void *a, void *b) { return eq_vi((vi *)a, (vi *)b); }
 
 void print_machine(Machine *m);
 void configure(Machine *m, int *lights, int *jolts);
 int configure_lights(Machine *m, str state, int index, int presses);
+int configure_joltage(Machine *m, vi *state, int index, int presses, int *best);
 bool compare_lights(str *target, str *current);
-
-int configure_joltage(Machine *m, vi state, int index, int presses);
-bool compare_joltage(vi *target, vi *current);
-bool can_press(vi *target, vi *current, vi *button);
+char compare_joltage(vi *target, vi *current);
+int max_press(vi *target, vi *current, vi *button);
 
 int main(int argc, char *argv[]) {
   if (argc < 2) {
@@ -59,11 +67,15 @@ int main(int argc, char *argv[]) {
   bool read_joltage = 0;
   int ch, value = 0;
 
+  // Parse input
   while ((ch = getc(f)) != EOF) {
     switch (ch) {
     case '\n':
       current.pos = schematics.count;
+      qsort(current.buttons->items, current.buttons->count, sizeof(vi *),
+            &cmp_vi);
       vm_append(&schematics, current);
+
       memset(&current, 0, sizeof(current));
       read_joltage = 0;
       break;
@@ -131,12 +143,13 @@ int main(int argc, char *argv[]) {
 
   ll p1 = 0, p2 = 0;
   for (int i = 0; i < schematics.count; i++) {
-    int lights, jolt;
-    configure(&schematics.items[i], &lights, &jolt);
-    printf("Configured %d/%zu with %d and %d\n", i + 1, schematics.count,
-           lights, jolt);
+    int lights, jolts;
+    configure(&schematics.items[i], &lights, &jolts);
+    printf("Configured %d with %d, %d\n", schematics.items[i].pos + 1, lights,
+           jolts);
+    assert(jolts != INT32_MAX);
     p1 += lights;
-    p2 += jolt;
+    p2 += jolts;
   }
 
   printf("Part 1: %lld\n", p1);
@@ -181,21 +194,26 @@ bool compare_lights(str *target, str *current) {
   return 1;
 }
 
-bool compare_joltage(vi *target, vi *current) {
+char compare_joltage(vi *target, vi *current) {
   for (int i = 0; i < target->count; i++) {
-    if (target->items[i] != current->items[i])
-      return 0;
+    if (target->items[i] != current->items[i]) {
+      return current->items[i] - target->items[i];
+    }
   }
-  return 1;
+  return 0;
 }
 
-bool can_press(vi *target, vi *current, vi *button) {
+int max_press(vi *target, vi *current, vi *button) {
+
+  int max_presses = INT32_MAX;
   for (int i = 0; i < button->count; i++) {
     int pos = button->items[i];
     if (target->items[pos] <= current->items[pos])
       return 0;
+    max_presses = MIN(target->items[pos] - current->items[pos], max_presses);
   }
-  return 1;
+
+  return max_presses;
 }
 
 void configure(Machine *m, int *lights, int *jolts) {
@@ -209,7 +227,8 @@ void configure(Machine *m, int *lights, int *jolts) {
   vi_init(&current_joltage, m->joltage->count);
   current_joltage.count = current_joltage.capacity;
 
-  *jolts = configure_joltage(m, current_joltage, 0, 0);
+  *jolts = INT32_MAX;
+  configure_joltage(m, &current_joltage, 0, 0, jolts);
 
   str_free(&current_lights);
   vi_free(&current_joltage);
@@ -243,37 +262,68 @@ int configure_lights(Machine *m, str state, int index, int presses) {
   return MIN(not_pressing, pressing);
 }
 
-int configure_joltage(Machine *m, vi state, int index, int presses) {
-  if (compare_joltage(m->joltage, &state)) {
-    return presses;
+bool can_configure(Machine *m, vi *state, int from_button) {
+  if (from_button == 0)
+    return 1;
+
+  int *slots = calloc(state->count, sizeof(int));
+  for (int i = from_button; i < m->buttons->count; i++) {
+    vi *button = m->buttons->items[i];
+    for (int j = 0; j < button->count; j++) {
+      slots[button->items[j]] = 1;
+    }
+  }
+  for (int i = 0; i < state->count; i++) {
+    if (slots[i] || state->items[i] == m->joltage->items[i])
+      continue;
+
+    free(slots);
+    return 0;
+  }
+  free(slots);
+  return 1;
+}
+
+int configure_joltage(Machine *m, vi *state, int index, int presses,
+                      int *best) {
+  char check = compare_joltage(m->joltage, state);
+  if (check == 0) {
+    *best = MIN(*best, presses);
+    return 0;
   }
 
-  if (index >= m->buttons->count)
-    return INT32_MAX;
-
-  int not_pressing = configure_joltage(m, state, index + 1, presses);
+  if (!can_configure(m, state, index))
+    return -1;
 
   vi *button = m->buttons->items[index];
 
-  vi new_state;
-  vi_init(&new_state, state.count);
+  int button_presses = max_press(m->joltage, state, button);
+  button_presses = MIN(*best - presses, button_presses);
 
-  for (int i = 0; i < state.count; i++) {
-    vi_append(&new_state, state.items[i]);
-  }
+  int times_pressed = INT32_MAX, result = 1;
+  for (; button_presses >= 0; button_presses--) {
+    if (presses + button_presses > *best)
+      continue;
 
-  int pressing = INT32_MAX;
-  for (; can_press(m->joltage, &new_state, button); presses++) {
-    // printf("Pressing %d times\n", presses);
     for (int i = 0; i < button->count; i++) {
       int pos = button->items[i];
-      new_state.items[pos] += 1;
+      state->items[pos] += button_presses;
     }
 
-    pressing =
-        MIN(configure_joltage(m, new_state, index + 1, presses + 1), pressing);
+    int attempt =
+        configure_joltage(m, state, index + 1, presses + button_presses, best);
+
+    for (int i = 0; i < button->count; i++) {
+      int pos = button->items[i];
+      state->items[pos] -= button_presses;
+    }
+
+    if (attempt < 0)
+      break; // Won't succeed with less presses
+    if (attempt == 0) {
+      result = 0;
+    }
   }
 
-  vi_free(&new_state);
-  return MIN(not_pressing, pressing);
+  return result;
 }
