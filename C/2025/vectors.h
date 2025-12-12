@@ -8,7 +8,10 @@
     size_t capacity;                                                           \
   } type_name;                                                                 \
                                                                                \
-  void type_name##_free(type_name *arr) { free(arr->items); }                  \
+  void type_name##_free(type_name *arr) {                                      \
+    free(arr->items);                                                          \
+    arr->count = 0;                                                            \
+  }                                                                            \
                                                                                \
   void type_name##_clear(type_name *arr) { arr->count = 0; }                   \
                                                                                \
