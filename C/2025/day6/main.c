@@ -1,8 +1,11 @@
-#include "../vectors.h"
+#include "../../base/vectors.h"
 #include <stdio.h>
 
 #define ll long long
 #define bool char
+
+DECLARE_VECTOR_OF_TYPE(vll, long long)
+DECLARE_VECTOR_OF_TYPE(str, char)
 
 ll part1(vll *numbers, str *operations, int rows);
 
@@ -14,13 +17,10 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  vll p1_numbers;
-  vll_init(&p1_numbers, 1000);
-  vll p2_numbers;
-  vll_init(&p2_numbers, 1000);
+  vll p1_numbers = vll_init(1000);
+  vll p2_numbers = vll_init(1000);
 
-  str operations;
-  str_init(&operations, 100);
+  str operations = str_init(100);
 
   bool reading_numbers = 1;
   ll current = 0;
@@ -77,9 +77,9 @@ int main(int argc, char *argv[]) {
   printf("Part 1: %lld\n", p1);
   printf("Part 1: %lld\n", p2);
 
-  str_free(&operations);
-  vll_free(&p2_numbers);
-  vll_free(&p1_numbers);
+  str_free(operations);
+  vll_free(p2_numbers);
+  vll_free(p1_numbers);
   return 0;
 }
 

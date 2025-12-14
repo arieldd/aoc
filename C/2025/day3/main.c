@@ -1,9 +1,11 @@
-#include "../vectors.h"
+#include "../../base/vectors.h"
 #include <memory.h>
 #include <stdio.h>
 
 #define ll long long
 #define ROW_SIZE 100
+
+DECLARE_VECTOR_OF_TYPE(str, char)
 
 ll max_jolt(str *bank);
 ll max_jolt_rec(str *bank, int batteries, int index, ll cache[]);
@@ -14,8 +16,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  str bank;
-  str_init(&bank, ROW_SIZE);
+  str bank = str_init(ROW_SIZE);
 
   /*
    * We need a cache by number of batteries and position.
@@ -63,7 +64,7 @@ int main(int argc, char *argv[]) {
   fclose(f);
 
   printf("Part 1: %lld\n", p1);
-  printf("Part 1: %lld\n", p2);
+  printf("Part 2: %lld\n", p2);
 
   return 0;
 }

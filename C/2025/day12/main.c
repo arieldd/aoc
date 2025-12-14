@@ -1,24 +1,22 @@
-#include "../vectors.h"
+#include "../../base/vectors.h"
 #include <stdio.h>
 
 #define bool char
+DECLARE_VECTOR_OF_TYPE(vi, int)
+DECLARE_VECTOR_OF_TYPE(str, char)
 
 typedef struct {
   int index, area;
   str grid;
 } Shape;
 
-static inline bool eq_shape(Shape a, Shape b) { return a.index == b.index; }
-
 typedef struct {
   int width, length, pos;
   vi presents;
 } Region;
 
-static inline bool eq_region(Region a, Region b) { return a.pos == b.pos; }
-
-DECLARE_VECTOR_TYPE(Shape, vs, eq_shape);
-DECLARE_VECTOR_TYPE(Region, vr, eq_region);
+DECLARE_VECTOR_OF_TYPE(vs, Shape);
+DECLARE_VECTOR_OF_TYPE(vr, Region);
 
 void print_shape(Shape *s);
 void print_region(Region *r);
@@ -41,11 +39,9 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  vs shapes;
-  vs_init(&shapes, 5);
+  vs shapes = vs_init(5);
 
-  vr regions;
-  vr_init(&regions, 100);
+  vr regions = vr_init(100);
 
   int ch, read_shapes = 1, value = 0, last;
   Shape shape;
@@ -67,10 +63,10 @@ int main(int argc, char *argv[]) {
     case ':':
       if (read_shapes) {
         shape.index = value;
-        str_init(&shape.grid, 9);
+        shape.grid = str_init(9);
       } else {
         region.length = value;
-        vi_init(&region.presents, 10);
+        region.presents = vi_init(10);
         value = -1;
       }
       break;
@@ -136,7 +132,7 @@ Shape rotate(Shape *s) {
   Shape rotated;
   rotated.index = s->index;
   rotated.area = s->area;
-  str_init(&rotated.grid, 9);
+  rotated.grid = str_init(9);
 
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {

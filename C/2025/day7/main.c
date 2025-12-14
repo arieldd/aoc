@@ -1,7 +1,9 @@
-#include "../vectors.h"
+#include "../../base/vectors.h"
 #include <stdio.h>
 
 #define ll long long
+DECLARE_VECTOR_OF_TYPE(str, char)
+DECLARE_VECTOR_OF_TYPE(vll, long long)
 
 int count_splits(str *grid, int columns, int start, str *visited);
 ll count_timelines(str *grid, int columns, int start, vll *cache);
@@ -18,8 +20,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  str grid;
-  str_init(&grid, 1000);
+  str grid = str_init(1000);
 
   int columns = 0, start = 0, counting_columns = 1;
 
@@ -42,20 +43,18 @@ int main(int argc, char *argv[]) {
   }
   fclose(f);
 
-  str visited;
-  str_init(&visited, grid.count);
+  str visited = str_init(grid.count);
   int p1 = count_splits(&grid, columns, start, &visited);
-  str_free(&visited);
+  str_free(visited);
 
-  vll cache;
-  vll_init(&cache, grid.count);
+  vll cache = vll_init(grid.count);
   ll p2 = count_timelines(&grid, columns, start, &cache);
-  vll_free(&cache);
+  vll_free(cache);
 
   printf("Part 1: %d\n", p1);
   printf("Part 1: %lld\n", p2);
 
-  str_free(&grid);
+  str_free(grid);
 
   return 0;
 }

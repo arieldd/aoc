@@ -1,5 +1,7 @@
-#include "../vectors.h"
+#include "../../base/vectors.h"
 #include <stdio.h>
+
+DECLARE_VECTOR_OF_TYPE(str, char)
 
 int remove_rolls(str *grid, int size);
 
@@ -10,8 +12,7 @@ int main(int argc, char *argv[]) {
   }
 
   int size = 0;
-  str grid;
-  str_init(&grid, 140 * 140);
+  str grid = str_init(140 * 140);
 
   FILE *f = fopen(argv[1], "r+");
   int ch;

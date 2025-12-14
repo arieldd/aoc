@@ -1,8 +1,10 @@
-#include "../vectors.h"
+#include "../../base/vectors.h"
 #include <stdio.h>
 
 #define ll long long
 #define bool char
+
+DECLARE_VECTOR_OF_TYPE(vll, long long)
 
 typedef struct {
   ll low;
@@ -13,7 +15,7 @@ static inline bool cmp_r(Range r1, Range r2) {
   return r1.low == r2.low && r1.high == r2.high;
 }
 
-DECLARE_VECTOR_TYPE(Range, vr, cmp_r)
+DECLARE_VECTOR_OF_TYPE(vr, Range)
 
 int count_fresh(vr ranges, vll ids);
 ll count_fresh_ranges(vr *ranges);
@@ -27,11 +29,9 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  vr ranges;
-  vr_init(&ranges, 200);
+  vr ranges = vr_init(200);
 
-  vll ids;
-  vll_init(&ids, 1000);
+  vll ids = vll_init(1000);
 
   ll value = 0;
   char read_ids = 0;
@@ -73,8 +73,8 @@ int main(int argc, char *argv[]) {
   printf("Part 1: %lld\n", p1);
   printf("Part 2: %lld\n", p2);
 
-  vll_free(&ids);
-  vr_free(&ranges);
+  vll_free(ids);
+  vr_free(ranges);
   return 0;
 }
 
@@ -114,7 +114,7 @@ void merge_overlapping_ranges(vr *ranges) {
       Range r2 = ranges->items[j];
       if (overlaps(r1, r2)) {
         new = merge(r1, r2);
-        vr_remove_at(ranges, j);
+        vr_swap_remove(ranges, j);
         break;
       }
     }

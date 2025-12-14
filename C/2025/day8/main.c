@@ -1,4 +1,4 @@
-#include "../vectors.h"
+#include "../../base/vectors.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,7 +24,7 @@ static inline double dist(JBox j1, JBox j2) {
   return sqrt(x2 + y2 + z2);
 }
 
-DECLARE_VECTOR_TYPE(JBox, vj, eq_j)
+DECLARE_VECTOR_OF_TYPE(vj, JBox)
 
 typedef struct {
   int i1, i2;
@@ -35,7 +35,7 @@ static inline char eq_conn(Conn c1, Conn c2) {
   return (c1.i1 == c2.i1 && c1.i2 == c2.i2) ||
          (c1.i1 == c2.i2 && c1.i2 == c2.i1);
 }
-DECLARE_VECTOR_TYPE(Conn, vcon, eq_conn)
+DECLARE_VECTOR_OF_TYPE(vcon, Conn)
 
 int cmp_size(const void *s1, const void *s2) {
   return (*(long *)s2) - (*(long *)s1);
@@ -59,8 +59,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  vj boxes;
-  vj_init(&boxes, 1000);
+  vj boxes = vj_init(1000);
 
   int ch, index = 0, value = 0;
   JBox next;
@@ -96,14 +95,13 @@ int main(int argc, char *argv[]) {
   printf("Part 1: %ld\n", p1);
   printf("Part 2: %ld\n", p2);
 
-  vj_free(&boxes);
+  vj_free(boxes);
   return 0;
 }
 
 void solve(vj *boxes, long *p1, long *p2) {
   // Calculate distances and sort connections ascending
-  vcon connections;
-  vcon_init(&connections, 1000);
+  vcon connections = vcon_init(1000);
   for (int i = 0; i < boxes->count - 1; i++) {
     for (int j = i + 1; j < boxes->count; j++) {
       JBox j1 = boxes->items[i], j2 = boxes->items[j];

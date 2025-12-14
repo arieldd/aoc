@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
   fclose(f);
 
   printf("Part 1: %lld\n", p1);
-  printf("Part 1: %lld\n", p2);
+  printf("Part 2: %lld\n", p2);
 
   return 0;
 }
@@ -55,7 +55,7 @@ void solve(ll lower, ll upper, ll *p1, ll *p2) {
     length = to_digits(current, digits);
     int half = length / 2;
     if (length % 2 == 0 && current / pow10[half] == current % pow10[half]) {
-        *p1 += current;
+      *p1 += current;
     }
 
     if (is_invalid(current, digits, length, 1)) {
